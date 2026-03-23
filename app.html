@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LucaVerse — Music Streamer</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Outfit:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="app.css" />
+</head>
+
+<body>
+
+  <!-- ── TOAST CONTAINER ──────────────────── -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- ── PLAYLIST MODAL ───────────────────── -->
+  <div id="playlistModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add to Playlist</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div id="modalPlaylistList" class="modal-playlist-list"></div>
+      <div class="modal-divider"></div>
+      <div class="modal-new-playlist">
+        <input type="text" id="newPlaylistInput" class="modal-input" placeholder="New playlist name…" maxlength="40" />
+        <button class="modal-create-btn" onclick="createPlaylistFromModal()">Create & Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── QUEUE PANEL ───────────────────────── -->
+  <div id="queuePanel" class="queue-panel">
+    <div class="queue-header">
+      <span>Up Next</span>
+      <button onclick="toggleQueue()" class="queue-close">✕</button>
+    </div>
+    <div id="queueList" class="queue-list"></div>
+  </div>
+  <div id="queueOverlay" class="queue-overlay" onclick="toggleQueue()"></div>
+
+  <div class="app-layout">
+    <!-- ── SIDEBAR ────────────────────────── -->
+    <nav class="sidebar">
+      <div class="logo">
+        <a href="index.html" style="text-decoration:none;">
+          <div class="logo-wordmark">Luca<span>Verse</span></div>
+          <div class="logo-tagline">— MUSIC STREAMER —</div>
+        </a>
+      </div>
+
+      <ul class="nav-links">
+        <li id="homeBtn" class="active"><span class="icon">🏠</span> Home</li>
+        <li id="searchBtn"><span class="icon">🔍</span> Search</li>
+        <li id="historyBtn"><span class="icon">🕒</span> History</li>
+      </ul>
+
+      <div class="divider"></div>
+
+      <ul class="nav-links small">
+        <li id="likedSongsBtn"><span class="icon">❤️</span> Liked Songs</li>
+      </ul>
+
+      <!-- Playlists -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span>Playlists</span>
+          <button id="newPlaylistBtn" class="add-playlist-btn" title="New Playlist">+</button>
+        </div>
+        <div id="sidebarPlaylists" class="sidebar-playlists">
+          <p class="playlist-empty-msg">Sign in to create playlists</p>
+        </div>
+      </div>
+
+      <!-- Profile / Guest -->
+      <div class="sidebar-user" id="sidebarUser">
+        <div class="su-avatar" id="suAvatar">?</div>
+        <div class="su-meta">
+          <div class="su-name" id="suName">Guest</div>
+          <div class="su-action" id="suAction">Sign in for more ↗</div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ── MAIN VIEW ──────────────────────── -->
+    <main class="main-view">
+      <header class="top-bar">
+        <div class="search-container">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" class="search-input" placeholder="What do you want to listen to?"
+            autocomplete="off" />
+        </div>
+        <div class="top-bar-actions">
+          <button id="queueToggleBtn" class="queue-btn" title="Queue">≡</button>
+          <div class="user-profile" id="userProfile" title="Profile"></div>
+        </div>
+      </header>
+
+      <div class="content-scroll" id="contentScroll">
+        <div id="loadingIndicator" class="loading-indicator" style="display:none;">
+          <!-- Skeleton cards -->
+          <div class="skeleton-grid">
+            <div class="skeleton-card">
+              <div class="sk-img"></div>
+              <div class="sk-line l1"></div>
+              <div class="sk-line l2"></div>
+            </div>
+            <div class="skeleton-card">
+              <div class="sk-img"></div>
+              <div class="sk-line l1"></div>
+              <div class="sk-line l2"></div>
+            </div>
+            <div class="skeleton-card">
+              <div class="sk-img"></div>
+              <div class="sk-line l1"></div>
+              <div class="sk-line l2"></div>
+            </div>
+            <div class="skeleton-card">
+              <div class="sk-img"></div>
+              <div class="sk-line l1"></div>
+              <div class="sk-line l2"></div>
+            </div>
+            <div class="skeleton-card">
+              <div class="sk-img"></div>
+              <div class="sk-line l1"></div>
+              <div class="sk-line l2"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Home View -->
+        <div id="homeView">
+          <!-- Featured Hero Banner -->
+          <div id="homeHero" class="home-hero" style="display:none;">
+            <img id="heroBgcImg" class="hero-bg-img" alt=""
+              onerror="this.onerror=null; this.src=this.dataset.fallback;" />
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+              <span class="hero-chip">🔥 TRENDING SPOTLIGHT</span>
+              <h1 id="heroTitle" class="hero-h1">Loading...</h1>
+              <p id="heroArtist" class="hero-p">...</p>
+              <div class="hero-actions">
+                <button id="heroPlayBtn" class="hero-play">▶ Play Now</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="homeRowsContainer"></div>
+          <div id="gridContainer" style="display:none;">
+            <h2 id="homeTitle" class="section-title">Trending Now</h2>
+            <div id="posterGrid" class="cards-grid"></div>
+          </div>
+        </div>
+
+        <!-- Search View -->
+        <div id="searchView" style="display:none;">
+          <h2 id="searchTitle" class="section-title">Search Results</h2>
+          <div class="track-list-header">
+            <div class="col-index">#</div>
+            <div class="col-title">Title</div>
+            <div class="col-artist">Artist</div>
+            <div class="col-like"></div>
+            <div class="col-time">⏱</div>
+          </div>
+          <div id="playlistList" class="track-list"></div>
+        </div>
+
+        <!-- Profile View -->
+        <div id="profileView" style="display:none;">
+          <div class="profile-hero">
+            <div class="profile-avatar-wrapper" onclick="document.getElementById('avatarUpload').click()"
+              title="Change Profile Picture">
+              <div class="profile-avatar-big" id="profileAvatarBig"
+                style="background-size:cover; background-position:center;">?</div>
+              <div class="avatar-edit-overlay">📷 Update</div>
+              <input type="file" id="avatarUpload" accept="image/*" style="display:none;"
+                onchange="handleAvatarUpload(event)">
+            </div>
+            <div class="profile-details">
+              <div class="profile-badge-row">
+                <span class="profile-type">Profile</span>
+                <div class="pro-badge"><span class="pro-dot"></span>USER</div>
+              </div>
+              <h1 class="profile-name" id="profileNameEl">Guest</h1>
+              <p class="profile-email" id="profileEmailEl">Not signed in</p>
+            </div>
+
+            <div class="live-visualizer">
+              <div class="lv-bar"></div>
+              <div class="lv-bar"></div>
+              <div class="lv-bar"></div>
+              <div class="lv-bar"></div>
+              <div class="lv-bar"></div>
+              <span>High-Res Active</span>
+            </div>
+          </div>
+
+          <div class="profile-stats-row">
+            <div class="pstat"><span id="pstatLiked">0</span>
+              <p>Liked</p>
+            </div>
+            <div class="pstat"><span id="pstatPlaylists">0</span>
+              <p>Playlists</p>
+            </div>
+            <div class="pstat"><span id="pstatPlayed">0</span>
+              <p>Played</p>
+            </div>
+          </div>
+
+          <div class="premium-features-card">
+            <h3>Premium Audio Engine</h3>
+            <div class="feature-toggle-row">
+              <div>
+                <h4>Lossless Audio (320kbps)</h4>
+                <p>Stream music in crystal clear master quality.</p>
+              </div>
+              <label class="switch"><input type="checkbox" checked><span class="slider round"></span></label>
+            </div>
+            <div class="feature-toggle-row">
+              <div>
+                <h4>Spatial Audio Effects</h4>
+                <p>Immersive 3D sound environment processing.</p>
+              </div>
+              <label class="switch"><input type="checkbox"><span class="slider round"></span></label>
+            </div>
+            <div class="feature-toggle-row">
+              <div>
+                <h4>Zero Ads & Offline Caching</h4>
+                <p>Uninterrupted listening anywhere.</p>
+              </div>
+              <label class="switch"><input type="checkbox" checked><span class="slider round"></span></label>
+            </div>
+          </div>
+
+          <div class="settings-matrix">
+            <!-- Profile & Privacy -->
+            <div class="settings-card profile-edit-card">
+              <h3>Settings & Privacy</h3>
+              <div class="input-row">
+                <div class="input-group">
+                  <label>Full Name</label>
+                  <input type="text" id="editProfileName" class="settings-input" placeholder="Your Name">
+                </div>
+                <div class="input-group">
+                  <label>Email Address</label>
+                  <input type="email" id="editEmail" class="settings-input" disabled style="opacity:0.6;"
+                    placeholder="Sign in to view">
+                </div>
+              </div>
+              <div class="input-row">
+                <div class="input-group">
+                  <label>Age</label>
+                  <input type="number" id="editAge" class="settings-input" placeholder="e.g. 21">
+                </div>
+                <div class="input-group">
+                  <label>Gender</label>
+                  <select id="editGender" class="settings-input">
+                    <option value="" disabled selected>Select Gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="prefer_not_to_say">Prefer not to say</option>
+                  </select>
+                </div>
+              </div>
+              <div class="input-row">
+                <div class="input-group">
+                  <label>Mobile Number</label>
+                  <input type="tel" id="editPhone" class="settings-input" placeholder="+91 xxxxxxxxxx">
+                </div>
+                <div class="input-group" style="opacity:0;pointer-events:none;"></div> <!-- Spacer -->
+              </div>
+              <button class="settings-btn" onclick="updateProfileData()">Save Details</button>
+            </div>
+
+            <!-- App Theme Engine -->
+            <div class="settings-card">
+              <h3>App Theme</h3>
+              <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px;">Select global interface aesthetic
+              </p>
+              <div class="theme-options">
+                <button class="theme-btn active" id="theme_luca" onclick="setThemeSettings('luca')">
+                  <div class="t-circle luca-theme"></div> Luca Blue
+                </button>
+                <button class="theme-btn" id="theme_spotify" onclick="setThemeSettings('spotify')">
+                  <div class="t-circle spotify-theme"></div> Dark Mode
+                </button>
+                <button class="theme-btn" id="theme_glass" onclick="setThemeSettings('glass')">
+                  <div class="t-circle glass-theme"></div> Glassmorphism
+                </button>
+              </div>
+            </div>
+
+            <!-- Feedback Portal -->
+            <div class="settings-card feedback-card">
+              <h3>📬 Send Feedback</h3>
+              <p style="font-size:12.5px; color:var(--muted2); margin-bottom:14px; line-height:1.5;">Got a bug, idea or
+                feature request? We read everything!</p>
+              <div class="input-group">
+                <textarea id="feedbackText" class="settings-input" rows="4"
+                  placeholder="What should we add, fix, or improve?"></textarea>
+              </div>
+              <a class="settings-btn feedback-submit-btn" id="feedbackLink" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">
+                Send Feedback ✉️
+              </a>
+            </div>
+
+            <!-- Security -->
+            <div class="settings-card">
+              <h3>Security</h3>
+              <div class="input-group">
+                <label>New Password</label>
+                <input type="password" id="editPassword" class="settings-input" placeholder="Min 6 characters">
+              </div>
+              <button class="settings-btn warning" onclick="updateUserPassword()">Update Password</button>
+            </div>
+
+            <!-- Contact Us -->
+            <div class="settings-card contact-card">
+              <h3>🤝 Contact US</h3>
+              <p style="font-size:12.5px;color:var(--muted2);margin-bottom:16px;line-height:1.5;">Built with ❤️ by the
+                LucaVerse team. Reach out anytime.</p>
+              <div class="contact-links">
+                <a class="contact-link" href="mailto:varungupta31009@gmail.com">
+                  <span class="cl-icon">📧</span>
+                  <div class="cl-info"><span class="cl-label">Email</span><span
+                      class="cl-val">varungupta31009@gmail.com</span></div>
+                </a>
+                <a class="contact-link" href="https://github.com/PiyushG009" target="_blank" rel="noopener">
+                  <span class="cl-icon">👨&zwj;💻</span>
+                  <div class="cl-info"><span class="cl-label">GitHub</span><span class="cl-val">@PiyushG009</span></div>
+                </a>
+                <a class="contact-link" href="https://www.linkedin.com/in/piyushg009/" target="_blank" rel="noopener">
+                  <span class="cl-icon">💼</span>
+                  <div class="cl-info"><span class="cl-label">LinkedIn</span><span class="cl-val">Connect with us</span>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-actions">
+            <button id="profileSignInBtn" class="profile-btn-primary" style="display:none;"
+              onclick="window.location.href='auth.html'">Sign In / Edit</button>
+            <button id="profileLogoutBtn" class="profile-btn-danger" style="display:none;" onclick="handleLogout()">Log
+              Out</button>
+          </div>
+        </div>
+
+        <!-- Playlist Detail View -->
+        <div id="playlistDetailView" style="display:none;">
+          <div class="playlist-detail-header">
+            <div class="pd-cover" id="pdCover">🎵</div>
+            <div class="pd-info">
+              <span class="profile-type">Playlist</span>
+              <h1 id="pdName">Playlist</h1>
+              <p id="pdCount" class="pd-count">0 songs</p>
+              <div class="pd-actions">
+                <button class="pd-play-btn" onclick="playPlaylist()">▶ Play All</button>
+                <button class="pd-del-btn" onclick="deleteCurrentPlaylist()">Delete</button>
+              </div>
+            </div>
+          </div>
+          <div id="pdTrackList" class="track-list"></div>
+        </div>
+
+        <div id="bottomLoader"
+          style="height:20px;text-align:center;color:var(--accent-1);margin-top:20px;display:none;">Loading more…</div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ── PLAYER BAR ─────────────────────── -->
+  <footer class="player-bar">
+    <div class="now-playing-info">
+      <img id="cover" class="cover-small" src="https://picsum.photos/300?random=10" alt="Cover" />
+      <div class="meta-small">
+        <div id="trackTitle" class="title-small">Track Title</div>
+        <div id="trackArtist" class="artist-small">Artist</div>
+      </div>
+      <button id="nowPlayingLikeBtn" class="like-btn" title="Save to Liked Songs">🤍</button>
+    </div>
+
+    <div class="player-controls-center">
+      <div class="controls">
+        <button id="shuffleBtn" class="btn icon-btn" title="Shuffle">🔀</button>
+        <button id="prevBtn" class="btn icon-btn" title="Previous">⏮</button>
+        <button id="playPauseBtn" class="btn primary-btn" title="Play">▶</button>
+        <button id="nextBtn" class="btn icon-btn" title="Next">⏭</button>
+        <button id="repeatBtn" class="btn icon-btn" title="Repeat">🔁</button>
+      </div>
+      <div class="progress-wrap">
+        <span id="currentTime">0:00</span>
+        <div id="progressContainer" class="progress-container">
+          <div id="progress" class="progress"></div>
+        </div>
+        <span id="duration">0:00</span>
+      </div>
+    </div>
+
+    <div class="vol-container">
+      <button id="muteBtn" class="btn icon-btn" title="Mute">🔈</button>
+      <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume" />
+      <button id="queueBtn" class="btn icon-btn" title="Queue" onclick="toggleQueue()">≡</button>
+    </div>
+  </footer>
+
+  <audio id="audio" crossorigin="anonymous" preload="metadata"></audio>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>

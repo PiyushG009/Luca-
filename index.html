@@ -1,133 +1,274 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Luca - The Music Player</title>
-  <link rel="stylesheet" href="web.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LucaVerse — Music Streamer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&f[]=satoshi@400,500,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="landing.css" />
+  <style>
+    .nav-logo .logo-script { font-family: 'Dancing Script', cursive; font-size: 26px; color: #fff; letter-spacing: -0.5px; }
+    .nav-logo .logo-script span { color: #00e5cc; }
+    .nav-logo .logo-sub { font-family: 'Outfit', sans-serif; font-size: 9px; letter-spacing: 3px; color: #00e5cc; text-transform: uppercase; display: block; margin-top: -4px; padding-left: 2px; }
+    .hero-title { font-family: 'Outfit', sans-serif; font-weight: 700; }
+    .footer-logo-script { font-family: 'Dancing Script', cursive; font-size: 32px; color: #fff; }
+    .footer-logo-script span { color: #00e5cc; }
+  </style>
 </head>
 <body>
 
-  <!-- Auth Overlay -->
-  <div id="authOverlay" class="auth-overlay" style="display: flex;">
-    <div class="auth-card">
-      <h1 class="auth-logo">Luca</h1>
-      <h2 id="authTitle">Log in to continue</h2>
-      <form id="authForm">
-        <input type="text" id="authName" placeholder="Your Name" required />
-        <input type="email" id="authEmail" placeholder="Email address" required />
-        <input type="password" id="authPassword" placeholder="Password" required />
-        <button type="submit" class="auth-submit-btn">Continue</button>
-      </form>
-      <div class="auth-divider"><span>or</span></div>
-      <button type="button" id="googleAuthBtn" class="google-btn">
-        <img src="https://img.icons8.com/color/48/000000/google-logo.png" alt="G" />
-        Continue with Google
-      </button>
+  <!-- ── NAV ─────────────────────────────────── -->
+  <nav class="nav" id="nav">
+    <a href="index.html" class="nav-logo">
+      <span class="logo-script">Luca<span>Verse</span></span>
+      <span class="logo-sub">— Music Streamer —</span>
+    </a>
+    <div class="nav-links">
+      <a href="auth.html" class="nav-ghost">Sign in</a>
+      <a href="app.html" class="nav-cta">Try free ↗</a>
+    </div>
+  </nav>
+
+  <!-- ── HERO ─────────────────────────────────── -->
+  <section class="hero">
+    <!-- Premium Mesh Gradient Background -->
+    <div class="mesh-bg"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <!-- Left: Content -->
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        Free · 320kbps · No Ads
+      </div>
+      <h1 class="hero-title">
+        Your music.<br />
+        Your <em>universe.</em>
+      </h1>
+      <p class="hero-sub">
+        Stream millions of songs instantly — no payment needed.<br />
+        Sign in to unlock playlists, liked songs, and sync across devices.
+      </p>
+      <div class="hero-ctas">
+        <a href="app.html" class="btn-primary">
+          <span>Start Listening Free</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="auth.html" class="btn-secondary">Sign in →</a>
+      </div>
+      <p class="hero-fine">No credit card. No subscription. Just music.</p>
+
+      <!-- Unique Audio Visualizer -->
+      <div class="hero-visualizer">
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      </div>
+    </div>
+
+    <!-- Right: LucaVerse Brand Centerpiece -->
+    <div class="hero-logo-container">
+      <img src="Lucaverse.png" alt="LucaVerse Logo" class="hero-main-logo" />
+      <div class="logo-glow"></div>
+    </div>
+  </section>
+
+  <!-- ── INFINITE MARQUEE ─────────────────────── -->
+  <div class="marquee-container">
+    <div class="marquee-content">
+      <span>✦ UNLIMITED STREAMING</span>
+      <span>✦ NO ADS EVER</span>
+      <span>✦ 320KBPS HD AUDIO</span>
+      <span>✦ SYNC ACROSS DEVICES</span>
+      <span>✦ 50 MILLION+ TRACKS</span>
+      <span>✦ UNLIMITED STREAMING</span>
+      <span>✦ NO ADS EVER</span>
+      <span>✦ 320KBPS HD AUDIO</span>
+      <span>✦ SYNC ACROSS DEVICES</span>
+      <span>✦ 50 MILLION+ TRACKS</span>
     </div>
   </div>
 
-  <div class="app-layout">
-    <!-- Sidebar -->
-    <nav class="sidebar">
-      <div class="logo">
-        <h1>Luca</h1>
-        <p>The Music Player</p>
-      </div>
-      <ul class="nav-links">
-        <li id="homeBtn" class="active"><span class="icon">🏠</span> Home</li>
-        <li id="searchBtn"><span class="icon">🔍</span> Search</li>
-        <li id="historyBtn"><span class="icon">🕒</span> Recently Played</li>
-      </ul>
-      <div class="divider"></div>
-      <ul class="nav-links small">
-        <li id="likedSongsBtn"><span class="icon">❤️</span> Liked Songs</li>
-      </ul>
-      <div class="sidebar-playlists">
-        <p>Top Hindi</p>
-        <p>Punjabi Hits</p>
-        <p>Party Mix</p>
-        <p>Lo-Fi Beats</p>
-        <p>Global Top 50</p>
-      </div>
-    </nav>
-
-    <!-- Main View -->
-    <main class="main-view">
-      <header class="top-bar">
-        <div class="search-container">
-          <span class="search-icon">🔍</span>
-          <input type="text" id="searchInput" class="search-input" placeholder="What do you want to listen to?" autocomplete="off" />
-        </div>
-        <div class="user-profile" id="userProfile" title="Logout">
-          <span id="userInitial">U</span>
-        </div>
-      </header>
-      
-      <div class="content-scroll" id="contentScroll">
-        <div id="loadingIndicator" class="loading-indicator" style="display: none;">Loading...</div>
-        
-        <!-- Home View for Posters -->
-        <div id="homeView">
-          <h2 id="homeTitle" class="section-title">Trending Now</h2>
-          <div id="posterGrid" class="cards-grid"></div>
-        </div>
-
-        <!-- Search View for List -->
-        <div id="searchView" style="display: none;">
-          <h2 id="searchTitle" class="section-title">Search Results</h2>
-          <div class="track-list-header">
-            <div class="col-index">#</div>
-            <div class="col-title">Title</div>
-            <div class="col-artist">Artist</div>
-            <div class="col-like"></div>
-            <div class="col-time">⏱</div>
-          </div>
-          <div id="playlistList" class="track-list"></div>
-        </div>
-
-        <!-- Infinite Scroll Loader marker -->
-        <div id="bottomLoader" style="height: 20px; text-align: center; color: var(--accent-1); margin-top:20px; display:none;">Loading more...</div>
-      </div>
-    </main>
-  </div>
-
-  <!-- Bottom Player Bar -->
-  <footer class="player-bar">
-    <div class="now-playing-info">
-      <img id="cover" class="cover-small" src="https://picsum.photos/300?random=10" alt="Cover" />
-      <div class="meta-small">
-        <div id="trackTitle" class="title-small">Track Title</div>
-        <div id="trackArtist" class="artist-small">Artist</div>
-      </div>
-      <button id="nowPlayingLikeBtn" class="like-btn" title="Save to Liked Songs">🤍</button>
+  <!-- ── STATS ─────────────────────────────────── -->
+  <section class="stats">
+    <div class="stat-item">
+      <span class="stat-num">50M+</span>
+      <span class="stat-label">Songs</span>
     </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-num">320</span>
+      <span class="stat-label">kbps quality</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-num">₹0</span>
+      <span class="stat-label">Forever free</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-num">∞</span>
+      <span class="stat-label">Playlists</span>
+    </div>
+  </section>
 
-    <div class="player-controls-center">
-      <div class="controls">
-        <button id="shuffleBtn" class="btn icon-btn" title="Shuffle">🔀</button>
-        <button id="prevBtn" class="btn icon-btn" title="Previous">⏮</button>
-        <button id="playPauseBtn" class="btn primary-btn" title="Play">▶</button>
-        <button id="nextBtn" class="btn icon-btn" title="Next">⏭</button>
-        <button id="repeatBtn" class="btn icon-btn" title="Repeat">🔁</button>
+  <!-- ── FEATURES ─────────────────────────────── -->
+  <section class="features" id="features">
+    <div class="features-label">Why LucaVerse</div>
+    <h2 class="features-title">Everything you need.<br /><em>Nothing you don't.</em></h2>
+
+    <div class="features-grid">
+      <div class="feat-card feat-large">
+        <div class="feat-icon">🎵</div>
+        <h3>Always Free</h3>
+        <p>Stream any song, anytime, at no cost. No trial periods, no paywalls — just music the way it should be.</p>
       </div>
-      <div class="progress-wrap">
-        <span id="currentTime">0:00</span>
-        <div id="progressContainer" class="progress-container">
-          <div id="progress" class="progress"></div>
+      <div class="feat-card">
+        <div class="feat-icon">🎧</div>
+        <h3>HD Quality</h3>
+        <p>Crystal clear 320kbps audio. Hear every detail the artist intended.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">❤️</div>
+        <h3>Your Library</h3>
+        <p>Like songs, build playlists. Sign in and your library syncs everywhere.</p>
+      </div>
+      <div class="feat-card feat-large feat-dark">
+        <div class="feat-icon">📱</div>
+        <h3>Works everywhere</h3>
+        <p>Desktop, mobile, tablet. LucaVerse is optimized for every screen — even works as a PWA you can install.</p>
+        <div class="feat-devices">
+          <div class="device-pill">Desktop</div>
+          <div class="device-pill">Mobile</div>
+          <div class="device-pill">Tablet</div>
         </div>
-        <span id="duration">0:00</span>
       </div>
     </div>
+  </section>
 
-    <div class="vol-container">
-      <button id="muteBtn" class="btn icon-btn" title="Mute">🔈</button>
-      <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume" />
+  <!-- ── HOW IT WORKS ────────────────────────── -->
+  <section class="how">
+    <h2 class="how-title">Up and running <em>in seconds.</em></h2>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="step-num">01</div>
+        <h3>Open LucaVerse</h3>
+        <p>No install, no download. Open in any browser and start playing instantly.</p>
+      </div>
+      <div class="how-arrow">→</div>
+      <div class="how-step">
+        <div class="step-num">02</div>
+        <h3>Search anything</h3>
+        <p>Hindi, Punjabi, English, Lo-Fi. Find any song from 50M+ tracks.</p>
+      </div>
+      <div class="how-arrow">→</div>
+      <div class="how-step">
+        <div class="step-num">03</div>
+        <h3>Sign in (optional)</h3>
+        <p>Create a free account to save liked songs, build playlists, and sync your library.</p>
+      </div>
     </div>
+  </section>
+
+  <!-- ── FINAL CTA ─────────────────────────────── -->
+  <section class="final-cta">
+    <div class="cta-glow"></div>
+    <h2 class="cta-title">Ready to listen?</h2>
+    <p class="cta-sub">Join thousands already streaming on LucaVerse.</p>
+    <div class="cta-btns">
+      <a href="app.html" class="btn-primary btn-large">Play now, free</a>
+      <a href="auth.html" class="btn-outline-cta">Create account</a>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ─────────────────────────────────── -->
+  <footer class="footer">
+    <div class="footer-logo"><span class="footer-logo-script">Luca<span>Verse</span></span></div>
+    <p class="footer-tag">Your music. Your universe.</p>
+    <div class="footer-links">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="auth.html">Sign In</a>
+      <a href="app.html">Try Free</a>
+    </div>
+    <p class="footer-copy">© 2026 LucaVerse. Made with ♥ for music lovers.</p>
   </footer>
 
-  <audio id="audio" preload="metadata"></audio>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-  <script src="web.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  <script>
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Scroll: add shadow and glass to nav
+    window.addEventListener('scroll', () => {
+      document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 20)
+    });
+
+    // Hero Animations on Load
+    const tl = gsap.timeline({ defaults: { ease: "power4.out", duration: 1.2 } });
+    
+    tl.from(".hero-badge", { y: 20, opacity: 0, duration: 0.8 }, 0.2)
+      .from(".hero-title", { y: 40, opacity: 0, duration: 1 }, 0.4)
+      .from(".hero-sub", { y: 20, opacity: 0, duration: 0.8 }, 0.6)
+      .from(".hero-ctas, .hero-fine", { y: 20, opacity: 0, stagger: 0.1, duration: 0.8 }, 0.8)
+      .from(".hero-logo-container", { scale: 0.8, opacity: 0, duration: 1.5, ease: "elastic.out(1, 0.5)" }, 0.5);
+
+    // Continuous Float Animation for Logo
+    gsap.to(".hero-main-logo", {
+      y: 20,
+      duration: 3,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut"
+    });
+
+    // Mouse Parallax for Logo Centerpiece
+    document.addEventListener("mousemove", (e) => {
+      const xAxis = (window.innerWidth / 2 - e.pageX) / 50;
+      const yAxis = (window.innerHeight / 2 - e.pageY) / 50;
+      gsap.to(".hero-main-logo", { 
+        x: xAxis * 2, 
+        y: yAxis * 2, 
+        rotationY: xAxis * 1.5, 
+        rotationX: -yAxis * 1.5, 
+        duration: 1.2, 
+        ease: "power2.out" 
+      });
+      gsap.to(".logo-glow", { 
+        x: xAxis * 4, 
+        y: yAxis * 4, 
+        duration: 1.5, 
+        ease: "power2.out" 
+      });
+    });
+
+    // Scroll Animations - Stats
+    gsap.from(".stat-item", {
+      scrollTrigger: { trigger: ".stats", start: "top 85%" },
+      y: 30, opacity: 0, stagger: 0.1, duration: 0.8, ease: "power3.out"
+    });
+
+    // Scroll Animations - Features
+    gsap.from(".feat-card", {
+      scrollTrigger: { trigger: ".features-grid", start: "top 80%" },
+      y: 40, opacity: 0, stagger: 0.1, duration: 1, ease: "power3.out"
+    });
+
+    // Scroll Animations - How it works
+    gsap.from(".how-step", {
+      scrollTrigger: { trigger: ".how-steps", start: "top 80%" },
+      y: 40, opacity: 0, stagger: 0.15, duration: 1, ease: "power3.out"
+    });
+
+    // Scroll Animations - Final CTA
+    gsap.from(".final-cta > *", {
+      scrollTrigger: { trigger: ".final-cta", start: "top 75%" },
+      y: 30, opacity: 0, stagger: 0.1, duration: 1, ease: "power3.out"
+    });
+  </script>
 </body>
 </html>

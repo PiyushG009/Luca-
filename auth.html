@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Luca — Sign In</title>
+  <link href="https://api.fontshare.com/v2/css?f[]=clash-display@700,800&f[]=satoshi@400,500,600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#06060a; --cyan:#00f2fe; --white:#f0f2f8;
+      --muted:#5a6080; --muted2:#8890b0; --border:rgba(255,255,255,.08);
+      --card:rgba(255,255,255,.04); --error:#ff5060; --success:#00e676;
+      --clash:'Clash Display',sans-serif; --satoshi:'Satoshi',sans-serif;
+    }
+    body{
+      font-family:var(--satoshi); background:var(--bg); color:var(--white);
+      min-height:100vh; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; padding:24px;
+      -webkit-font-smoothing:antialiased;
+    }
+    body::before{
+      content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+      background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(0,242,254,.06),transparent);
+    }
+
+    .back-link{
+      position:fixed; top:22px; left:26px; z-index:10;
+      color:var(--muted); font-size:14px; text-decoration:none;
+      display:flex; align-items:center; gap:6px; transition:color .2s;
+    }
+    .back-link:hover{color:var(--white)}
+
+    .auth-wrap{width:100%;max-width:420px;position:relative;z-index:1}
+
+    .auth-logo{
+      font-family:var(--clash); font-size:38px; font-weight:800; letter-spacing:-1.5px;
+      background:linear-gradient(90deg,#fff,var(--cyan));
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+      text-align:center; margin-bottom:6px; display:block; text-decoration:none;
+    }
+    .auth-tagline{text-align:center;color:var(--muted2);font-size:14px;margin-bottom:32px}
+
+    .auth-card{
+      background:var(--card); border:1px solid var(--border); border-radius:22px;
+      padding:32px 28px; backdrop-filter:blur(30px);
+    }
+
+    .tabs{
+      display:flex; background:rgba(255,255,255,.06); border-radius:99px;
+      padding:4px; margin-bottom:24px; gap:4px;
+    }
+    .tab-btn{
+      flex:1; padding:10px; border:none; border-radius:99px; cursor:pointer;
+      font-family:var(--satoshi); font-size:14px; font-weight:500;
+      color:var(--muted); background:transparent; transition:all .2s;
+    }
+    .tab-btn.active{background:var(--cyan);color:#000;font-weight:700}
+
+    .form-view{display:none}
+    .form-view.active{display:flex;flex-direction:column;gap:13px}
+
+    .input-group{display:flex;flex-direction:column;gap:5px}
+    .input-group label{font-size:12px;color:var(--muted2);font-weight:500;letter-spacing:.3px}
+    .auth-input{
+      background:rgba(255,255,255,.06); border:1px solid var(--border);
+      border-radius:10px; padding:12px 15px; color:var(--white);
+      font-family:var(--satoshi); font-size:14.5px; outline:none; width:100%;
+      transition:border-color .2s, background .2s;
+    }
+    .auth-input:focus{border-color:var(--cyan);background:rgba(0,242,254,.06)}
+    .auth-input::placeholder{color:var(--muted)}
+
+    .forgot-link{
+      font-size:12.5px; color:var(--muted2); text-decoration:none;
+      text-align:right; display:block; transition:color .2s; cursor:pointer;
+    }
+    .forgot-link:hover{color:var(--cyan)}
+
+    .submit-btn{
+      width:100%; padding:13px; border:none; border-radius:10px;
+      background:var(--cyan); color:#000; font-family:var(--satoshi);
+      font-size:15px; font-weight:700; cursor:pointer; margin-top:4px;
+      transition:transform .2s,box-shadow .2s; position:relative; overflow:hidden;
+    }
+    .submit-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,242,254,.3)}
+    .submit-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .submit-btn .btn-loader{
+      display:none; width:18px; height:18px; border:2px solid rgba(0,0,0,.3);
+      border-top-color:#000; border-radius:50%; animation:spin .7s linear infinite; margin:0 auto;
+    }
+    .submit-btn.loading .btn-text{display:none}
+    .submit-btn.loading .btn-loader{display:block}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .or-div{
+      display:flex; align-items:center; gap:10px; color:var(--muted); font-size:13px; margin:4px 0;
+    }
+    .or-div::before,.or-div::after{content:'';flex:1;height:1px;background:var(--border)}
+
+    /* Google button — premium style */
+    .google-btn{
+      width:100%; padding:12px; border:1px solid var(--border); border-radius:10px;
+      background:rgba(255,255,255,.05); color:var(--white); font-family:var(--satoshi);
+      font-size:14.5px; font-weight:500; cursor:pointer; display:flex;
+      align-items:center; justify-content:center; gap:12px;
+      transition:background .2s, border-color .2s, transform .2s;
+    }
+    .google-btn:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.18);transform:translateY(-1px)}
+    .google-btn img{width:20px;height:20px}
+    .google-btn-spinner{
+      display:none; width:18px; height:18px; border:2px solid rgba(255,255,255,.2);
+      border-top-color:var(--white); border-radius:50%; animation:spin .7s linear infinite;
+    }
+    .google-btn.loading .google-btn-text{display:none}
+    .google-btn.loading .google-btn-spinner{display:block}
+
+    .auth-msg{
+      padding:11px 15px; border-radius:9px; font-size:13.5px; text-align:center;
+      display:none; margin-top:6px;
+    }
+    .auth-msg.error  {background:rgba(255,80,80,.1); border:1px solid rgba(255,80,80,.25); color:var(--error); display:block}
+    .auth-msg.success{background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.2); color:var(--success); display:block}
+
+    .strength-bar{height:3px;border-radius:2px;background:rgba(255,255,255,.1);margin-top:5px;overflow:hidden;display:none}
+    .strength-fill{height:100%;border-radius:2px;width:0%;transition:width .3s,background .3s}
+
+    .alt-view{display:none}
+    .alt-view.active{display:flex;flex-direction:column;gap:15px}
+    .view-title{font-family:var(--clash);font-size:22px;font-weight:700;margin-bottom:3px}
+    .view-sub{font-size:14px;color:var(--muted2);line-height:1.6}
+    .back-to-login{
+      text-align:center;font-size:13.5px;color:var(--muted2);cursor:pointer;
+      text-decoration:underline;transition:color .2s;background:none;border:none;
+      font-family:var(--satoshi);
+    }
+    .back-to-login:hover{color:var(--white)}
+  </style>
+</head>
+<body>
+
+  <a href="index.html" class="back-link">← Back</a>
+
+  <div class="auth-wrap">
+    <a href="index.html" class="auth-logo">Luca</a>
+    <p class="auth-tagline">Your music universe awaits.</p>
+
+    <!-- MAIN CARD -->
+    <div class="auth-card" id="mainCard">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('login')">Sign In</button>
+        <button class="tab-btn" onclick="switchTab('signup')">Sign Up</button>
+      </div>
+
+      <!-- Sign In -->
+      <div class="form-view active" id="loginView">
+        <div class="input-group">
+          <label>Email</label>
+          <input type="email" class="auth-input" id="loginEmail" placeholder="you@example.com" />
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input type="password" class="auth-input" id="loginPassword" placeholder="Your password" />
+          <a class="forgot-link" onclick="showForgot()">Forgot password?</a>
+        </div>
+        <button class="submit-btn" id="loginBtn" onclick="handleLogin()">
+          <span class="btn-text">Sign In</span>
+          <div class="btn-loader"></div>
+        </button>
+        <div class="or-div">or</div>
+        <button class="google-btn" id="googleBtn" onclick="handleGoogle()">
+          <img src="https://img.icons8.com/color/48/google-logo.png" alt="G" />
+          <span class="google-btn-text">Continue with Google</span>
+          <div class="google-btn-spinner"></div>
+        </button>
+        <div class="auth-msg" id="loginMsg"></div>
+      </div>
+
+      <!-- Sign Up -->
+      <div class="form-view" id="signupView">
+        <div class="input-group">
+          <label>Your Name</label>
+          <input type="text" class="auth-input" id="signupName" placeholder="Arjun Sharma" />
+        </div>
+        <div class="input-group">
+          <label>Email</label>
+          <input type="email" class="auth-input" id="signupEmail" placeholder="you@example.com" />
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input type="password" class="auth-input" id="signupPassword" placeholder="Min. 8 characters" oninput="checkStrength(this.value)" />
+          <div class="strength-bar" id="strengthBar"><div class="strength-fill" id="strengthFill"></div></div>
+        </div>
+        <button class="submit-btn" id="signupBtn" onclick="handleSignup()">
+          <span class="btn-text">Create Account</span>
+          <div class="btn-loader"></div>
+        </button>
+        <div class="or-div">or</div>
+        <button class="google-btn" onclick="handleGoogle()">
+          <img src="https://img.icons8.com/color/48/google-logo.png" alt="G" />
+          <span class="google-btn-text">Continue with Google</span>
+          <div class="google-btn-spinner"></div>
+        </button>
+        <div class="auth-msg" id="signupMsg"></div>
+      </div>
+    </div>
+
+    <!-- FORGOT PASSWORD CARD -->
+    <div class="auth-card" id="forgotCard" style="display:none;">
+      <div class="alt-view active">
+        <div>
+          <div class="view-title">Forgot password?</div>
+          <div class="view-sub">Enter your email — we'll send a reset link.</div>
+        </div>
+        <div class="input-group">
+          <label>Email</label>
+          <input type="email" class="auth-input" id="forgotEmail" placeholder="you@example.com" />
+        </div>
+        <button class="submit-btn" id="forgotBtn" onclick="handleForgot()">
+          <span class="btn-text">Send Reset Link</span>
+          <div class="btn-loader"></div>
+        </button>
+        <div class="auth-msg" id="forgotMsg"></div>
+        <button class="back-to-login" onclick="showMain()">← Back to Sign In</button>
+      </div>
+    </div>
+
+    <!-- RESET PASSWORD CARD -->
+    <div class="auth-card" id="resetCard" style="display:none;">
+      <div class="alt-view active">
+        <div>
+          <div class="view-title">New Password</div>
+          <div class="view-sub">Choose a strong new password for your account.</div>
+        </div>
+        <div class="input-group">
+          <label>New Password</label>
+          <input type="password" class="auth-input" id="resetPassword" placeholder="Min. 8 characters" />
+        </div>
+        <div class="input-group">
+          <label>Confirm Password</label>
+          <input type="password" class="auth-input" id="resetConfirm" placeholder="Same password again" />
+        </div>
+        <button class="submit-btn" id="resetBtn" onclick="handleReset()">
+          <span class="btn-text">Update Password</span>
+          <div class="btn-loader"></div>
+        </button>
+        <div class="auth-msg" id="resetMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Check session / recovery mode on load ──
+    window.addEventListener('load', async () => {
+      // Handle password recovery email link
+      const hash = window.location.hash
+      if (hash.includes('type=recovery')) {
+        document.getElementById('mainCard').style.display = 'none'
+        document.getElementById('resetCard').style.display = 'block'
+        return
+      }
+      // Handle OAuth callback (Google sign in redirect)
+      if (hash.includes('access_token') || hash.includes('error_description')) {
+        // Supabase processes this automatically via detectSessionInUrl
+        // Wait briefly then check session
+        await new Promise(r => setTimeout(r, 500))
+      }
+      // If already logged in → go straight to app
+      const { data: { session } } = await db.auth.getSession()
+      if (session) { window.location.href = 'app.html'; return }
+    })
+
+    // ── Listen for auth state (catches Google OAuth callback) ──
+    db.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        window.location.href = 'app.html'
+      }
+    })
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach((b,i) =>
+        b.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='signup'))
+      )
+      document.getElementById('loginView').classList.toggle('active', tab==='login')
+      document.getElementById('signupView').classList.toggle('active', tab==='signup')
+    }
+
+    function showForgot() {
+      document.getElementById('mainCard').style.display = 'none'
+      document.getElementById('forgotCard').style.display = 'block'
+    }
+    function showMain() {
+      document.getElementById('forgotCard').style.display = 'none'
+      document.getElementById('resetCard').style.display = 'none'
+      document.getElementById('mainCard').style.display = 'block'
+    }
+
+    function setLoading(btnId, loading) {
+      const btn = document.getElementById(btnId)
+      btn.classList.toggle('loading', loading); btn.disabled = loading
+    }
+    function showMsg(id, text, type) {
+      const el = document.getElementById(id); el.textContent = text; el.className = 'auth-msg ' + type
+    }
+
+    // ── Sign In ──
+    async function handleLogin() {
+      const email    = document.getElementById('loginEmail').value.trim()
+      const password = document.getElementById('loginPassword').value
+      if (!email || !password) return showMsg('loginMsg', 'Please fill in all fields.', 'error')
+      setLoading('loginBtn', true)
+      const { error } = await db.auth.signInWithPassword({ email, password })
+      setLoading('loginBtn', false)
+      if (error) return showMsg('loginMsg', error.message, 'error')
+      window.location.href = 'app.html'
+    }
+
+    // ── Sign Up ──
+    async function handleSignup() {
+      const name     = document.getElementById('signupName').value.trim()
+      const email    = document.getElementById('signupEmail').value.trim()
+      const password = document.getElementById('signupPassword').value
+      if (!name || !email || !password) return showMsg('signupMsg', 'Please fill in all fields.', 'error')
+      if (password.length < 8) return showMsg('signupMsg', 'Password must be at least 8 characters.', 'error')
+      setLoading('signupBtn', true)
+      const { error } = await db.auth.signUp({ email, password, options: { data: { full_name: name } } })
+      setLoading('signupBtn', false)
+      if (error) return showMsg('signupMsg', error.message, 'error')
+      showMsg('signupMsg', '✓ Account created! Check your email to verify, then sign in.', 'success')
+    }
+
+    // ── Google OAuth ── KEY FIX: use current origin dynamically
+    async function handleGoogle() {
+      const btn = document.getElementById('googleBtn')
+      btn.classList.add('loading'); btn.disabled = true
+
+      const redirectTo = window.location.origin + '/app.html'
+
+      const { error } = await db.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      })
+      if (error) {
+        btn.classList.remove('loading'); btn.disabled = false
+        alert('Google Sign-In error: ' + error.message + '\n\nMake sure you have added Client ID and Secret in Supabase → Authentication → Providers → Google')
+      }
+      // If no error, browser will redirect to Google
+    }
+
+    // ── Forgot Password ──
+    async function handleForgot() {
+      const email = document.getElementById('forgotEmail').value.trim()
+      if (!email) return showMsg('forgotMsg', 'Please enter your email.', 'error')
+      setLoading('forgotBtn', true)
+      const { error } = await db.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/auth.html'
+      })
+      setLoading('forgotBtn', false)
+      if (error) return showMsg('forgotMsg', error.message, 'error')
+      showMsg('forgotMsg', '✓ Reset link sent! Check your inbox.', 'success')
+    }
+
+    // ── Password Reset ──
+    async function handleReset() {
+      const password = document.getElementById('resetPassword').value
+      const confirm  = document.getElementById('resetConfirm').value
+      if (password.length < 8) return showMsg('resetMsg', 'Password must be at least 8 characters.', 'error')
+      if (password !== confirm)  return showMsg('resetMsg', 'Passwords do not match.', 'error')
+      setLoading('resetBtn', true)
+      const { error } = await db.auth.updateUser({ password })
+      setLoading('resetBtn', false)
+      if (error) return showMsg('resetMsg', error.message, 'error')
+      showMsg('resetMsg', '✓ Password updated! Redirecting...', 'success')
+      setTimeout(() => window.location.href = 'app.html', 1500)
+    }
+
+    // ── Password strength ──
+    function checkStrength(val) {
+      const bar = document.getElementById('strengthBar'), fill = document.getElementById('strengthFill')
+      bar.style.display = 'block'
+      let score = 0
+      if (val.length >= 8)          score++
+      if (/[A-Z]/.test(val))        score++
+      if (/[0-9]/.test(val))        score++
+      if (/[^A-Za-z0-9]/.test(val)) score++
+      fill.style.width      = ['25%','50%','75%','100%'][score-1] || '0%'
+      fill.style.background = ['#ff5b5b','#ffa94d','#ffd43b','#00e676'][score-1] || 'transparent'
+    }
+
+    // ── Enter key ──
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return
+      const mainVisible   = document.getElementById('mainCard').style.display !== 'none'
+      const forgotVisible = document.getElementById('forgotCard').style.display !== 'none'
+      const resetVisible  = document.getElementById('resetCard').style.display !== 'none'
+      const isLogin = document.getElementById('loginView').classList.contains('active')
+      if (mainVisible  && isLogin)  handleLogin()
+      if (mainVisible  && !isLogin) handleSignup()
+      if (forgotVisible)            handleForgot()
+      if (resetVisible)             handleReset()
+    })
+  </script>
+</body>
+</html>
