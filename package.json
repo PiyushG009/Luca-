@@ -1,0 +1,13 @@
+{
+  "name": "luca-music",
+  "version": "1.0.0",
+  "description": "LucaVerse Music Streamer",
+  "main": "app.js",
+  "scripts": {
+    "dev": "npx -y lite-server",
+    "build": "node scripts/build.mjs"
+  },
+  "devDependencies": {
+    "lite-server": "^2.6.1"
+  }
+}

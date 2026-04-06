@@ -5,9 +5,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>LucaVerse — Music Streamer</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Outfit:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="app.css" />
 </head>
 
@@ -16,7 +14,7 @@
   <!-- ── TOAST CONTAINER ──────────────────── -->
   <div id="toastContainer" class="toast-container"></div>
 
-  <!-- ── PLAYLIST MODAL ───────────────────── -->
+  <!-- ── PLAYLIST MODAL (Add to Playlist) ─── -->
   <div id="playlistModal" class="modal-overlay" style="display:none;">
     <div class="modal-card">
       <div class="modal-header">
@@ -32,7 +30,64 @@
     </div>
   </div>
 
+  <!-- ── NEW PLAYLIST MODAL (replaces prompt()) ── -->
+  <div id="newPlaylistModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card" style="max-width:340px;">
+      <div class="modal-header">
+        <h3>New Playlist</h3>
+        <button class="modal-close" onclick="closeNewPlaylistModal()">✕</button>
+      </div>
+      <input
+        type="text"
+        id="newPlaylistNameInput"
+        class="modal-input"
+        placeholder="Playlist name…"
+        maxlength="40"
+        style="width:100%;margin-bottom:16px;"
+      />
+      <button class="modal-create-btn" style="width:100%;padding:12px;" onclick="confirmNewPlaylist()">
+        Create Playlist
+      </button>
+    </div>
+  </div>
+
+  <!-- ── CONFIRM MODAL (replaces confirm()) ── -->
+  <div id="confirmModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card confirm-card">
+      <div class="confirm-icon">🗑️</div>
+      <h3 id="confirmTitle">Are you sure?</h3>
+      <p id="confirmMessage" class="confirm-message">This action cannot be undone.</p>
+      <div class="confirm-actions">
+        <button class="confirm-cancel-btn" onclick="closeConfirmModal()">Cancel</button>
+        <button id="confirmOkBtn" class="confirm-ok-btn">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── QUEUE PANEL ───────────────────────── -->
+  <div id="syncModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card sync-modal-card">
+      <div class="modal-header">
+        <h3>Luca-Sync</h3>
+        <button class="modal-close" onclick="closeSyncModal()">âœ•</button>
+      </div>
+      <p class="sync-modal-copy">Start a room or join one with a code to listen together.</p>
+      <div class="sync-room-grid">
+        <button class="sync-room-action" onclick="createSyncRoom()">
+          <span class="sync-room-icon">&#127911;</span>
+          <strong>Create Room</strong>
+          <span>Generate a room code and invite your crew.</span>
+        </button>
+        <div class="sync-room-panel">
+          <label class="sync-room-label" for="syncRoomCode">Join with code</label>
+          <input type="text" id="syncRoomCode" class="modal-input sync-room-input" maxlength="12" placeholder="Enter room code" />
+          <button class="modal-create-btn sync-room-join" onclick="joinSyncRoom()">Join Room</button>
+        </div>
+      </div>
+      <div id="syncRoomStatus" class="sync-room-status">Room sync foundation is ready.</div>
+    </div>
+  </div>
+
   <div id="queuePanel" class="queue-panel">
     <div class="queue-header">
       <span>Up Next</span>
@@ -41,6 +96,191 @@
     <div id="queueList" class="queue-list"></div>
   </div>
   <div id="queueOverlay" class="queue-overlay" onclick="toggleQueue()"></div>
+
+  <!-- ── LYRICS PANEL ──────────────────────── -->
+  <div id="lyricsPanel" class="lyrics-panel">
+    <div class="lyrics-panel-header">
+      <div class="lyrics-track-info">
+        <div class="lyrics-song-title" id="lyricsSongTitle">—</div>
+        <div class="lyrics-artist-name" id="lyricsArtistName">—</div>
+      </div>
+      <button class="lyrics-close-btn" onclick="toggleLyrics()">✕</button>
+    </div>
+    <div id="lyricsPanelBody" class="lyrics-panel-body">
+      <div class="lyrics-empty"><span>🎵</span><p>Play a song to see lyrics</p></div>
+    </div>
+  </div>
+
+  <!-- ── VISUALIZER ────────────────────────── -->
+  <div id="vizWrap" class="viz-canvas-wrap" style="display:none;">
+    <canvas id="vizCanvas"></canvas>
+  </div>
+
+  <!-- ── AUDIO FX BAR ──────────────────────── -->
+  <div id="fxBar" class="audio-effects-bar">
+    <button class="fx-btn active" id="fxbtn_normal" onclick="applyFX('normal')">Normal</button>
+    <button class="fx-btn" id="fxbtn_bass"   onclick="applyFX('bass')">🔊 Bass</button>
+    <button class="fx-btn" id="fxbtn_treble" onclick="applyFX('treble')">✨ Treble</button>
+    <button class="fx-btn" id="fxbtn_vocal"  onclick="applyFX('vocal')">🎙 Vocal</button>
+    <button class="fx-btn" id="fxbtn_lofi"   onclick="applyFX('lofi')">📻 Lo-Fi</button>
+    <button class="fx-btn" id="fxbtn_loud"   onclick="applyFX('loud')">💥 Loud</button>
+    <button class="fx-toggle-btn" id="fxToggleBtn" onclick="toggleFXBar()">FX ✕</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       NOW PLAYING — ULTRA PREMIUM POPUP
+  ═══════════════════════════════════════════ -->
+  <div id="nowPlayingOverlay" class="np-overlay">
+    <div class="np-sonic-glow" id="npSonicGlow"></div>
+    <div class="np-bg-blur" id="npBgBlur"></div>
+    <div class="np-bg-grain"></div>
+    <div class="np-bg-vignette"></div>
+
+    <button class="np-close-btn" id="npCloseBtn" onclick="closeNowPlaying()" title="Minimize">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    </button>
+
+    <div class="np-inner">
+      <!-- MAIN PLAYER COLUMN -->
+      <div class="np-left">
+        <div class="np-device-label">
+          <svg class="np-device-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+            <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+            <line x1="12" y1="20" x2="12.01" y2="20"/>
+          </svg>
+          Playing on this device
+        </div>
+
+        <div class="np-art-outer">
+          <div class="np-art-wrapper">
+            <img id="npCoverImg" class="np-cover-art" src="https://picsum.photos/500" alt="Album Art" loading="lazy" />
+          </div>
+        </div>
+
+        <div class="np-meta-row">
+          <div class="np-song-info">
+            <div class="np-song-title" id="npSongTitle">Track Title</div>
+            <div class="np-song-artist" id="npSongArtist">Artist</div>
+          </div>
+          <button class="np-like-btn" id="npLikeBtn" onclick="npToggleLike()" title="Like">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="np-progress-section">
+          <div class="np-progress-track" id="npProgressContainer">
+            <div class="np-progress-fill" id="npProgress">
+              <div class="np-progress-thumb" id="npThumb"></div>
+            </div>
+          </div>
+          <div class="np-time-row">
+            <span id="npCurrentTime">0:00</span>
+            <span id="npDuration">0:00</span>
+          </div>
+        </div>
+
+        <div class="np-controls">
+          <button class="np-ctrl-btn" id="npShuffleBtn" onclick="document.getElementById('shuffleBtn').click()" title="Shuffle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+              <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+            </svg>
+          </button>
+          <button class="np-ctrl-btn np-prev" id="npPrevBtn" onclick="document.getElementById('prevBtn').click()" title="Previous">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+          </button>
+          <button class="np-play-main" id="npPlayPauseBtn" onclick="togglePlay()">
+            <svg class="np-pbtn-icon" viewBox="0 0 24 24" fill="currentColor" style="margin-left:3px">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+          </button>
+          <button class="np-ctrl-btn np-next" id="npNextBtn" onclick="document.getElementById('nextBtn').click()" title="Next">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+          </button>
+          <button class="np-ctrl-btn" id="npRepeatBtn" onclick="document.getElementById('repeatBtn').click()" title="Repeat" style="position:relative">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+              <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+            <span class="np-repeat-badge">1</span>
+          </button>
+        </div>
+
+        <div class="np-footer-row">
+          <div class="np-volume-row">
+            <span class="np-vol-icon" id="npVolIcon" onclick="document.getElementById('muteBtn').click()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              </svg>
+            </span>
+            <input type="range" id="npVolume" class="np-vol-slider gradient-slider" min="0" max="1" step="0.01" value="0.8" />
+          </div>
+          <div class="np-extra-btns">
+            <div class="np-waveform" id="npWaveform"></div>
+            <button class="np-extra-btn" id="npEQBtn" onclick="toggleNpEQ()" title="Equalizer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+                <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+                <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
+                <line x1="17" y1="16" x2="23" y2="16"/>
+              </svg>
+            </button>
+            <button class="np-extra-btn" id="npLyricsBtn" onclick="toggleNpLyrics()" title="Lyrics">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </button>
+            <button class="np-extra-btn" onclick="toggleQueue()" title="Queue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+                <line x1="8" y1="18" x2="21" y2="18"/>
+                <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
+                <line x1="3" y1="18" x2="3.01" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="np-eq-panel" id="npEQPanel">
+          <div class="np-eq-label">Sound Mode</div>
+          <div class="np-eq-grid">
+            <button class="np-eq-btn active" id="npfx_normal" onclick="applyNpFX('normal')">Normal</button>
+            <button class="np-eq-btn" id="npfx_bass"   onclick="applyNpFX('bass')">Bass+</button>
+            <button class="np-eq-btn" id="npfx_treble" onclick="applyNpFX('treble')">Treble</button>
+            <button class="np-eq-btn" id="npfx_vocal"  onclick="applyNpFX('vocal')">Vocal</button>
+            <button class="np-eq-btn" id="npfx_lofi"   onclick="applyNpFX('lofi')">Lo-Fi</button>
+            <button class="np-eq-btn" id="npfx_loud"   onclick="applyNpFX('loud')">Loud</button>
+          </div>
+        </div>
+
+      </div><!-- /np-left -->
+
+      <!-- LYRICS PANEL -->
+      <div class="np-lyrics-panel" id="npLyricsPanel">
+        <div class="np-lyrics-top">
+          <span class="np-lyrics-heading">Lyrics</span>
+          <button class="np-lyr-close-btn" onclick="closeNpLyrics()" title="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="np-lyrics-body" id="npLyricsBody">
+          <div class="lyrics-empty"><span>🎤</span><p>Tap the lyrics button</p></div>
+        </div>
+      </div>
+
+    </div><!-- /np-inner -->
+  </div><!-- /nowPlayingOverlay -->
 
   <div class="app-layout">
     <!-- ── SIDEBAR ────────────────────────── -->
@@ -52,32 +292,45 @@
         </a>
       </div>
 
-      <ul class="nav-links">
-        <li id="homeBtn" class="active"><span class="icon">🏠</span> Home</li>
-        <li id="searchBtn"><span class="icon">🔍</span> Search</li>
-        <li id="historyBtn"><span class="icon">🕒</span> History</li>
-      </ul>
+      <div class="sidebar-scroll-content">
+        <ul class="nav-links">
+          <li id="homeBtn" class="active"><span class="icon">🏠</span> Home</li>
+          <li id="searchBtn"><span class="icon">🔍</span> Search</li>
+          <li id="historyBtn"><span class="icon">🕒</span> History</li>
+        </ul>
 
-      <div class="divider"></div>
+        <div class="divider"></div>
 
-      <ul class="nav-links small">
-        <li id="likedSongsBtn"><span class="icon">❤️</span> Liked Songs</li>
-      </ul>
+        <ul class="nav-links small">
+          <li id="likedSongsBtn"><span class="icon">❤️</span> Liked Songs</li>
+          <li id="lyricsBtn"><span class="icon">🎤</span> Lyrics</li>
+        </ul>
 
-      <!-- Playlists -->
-      <div class="sidebar-section">
-        <div class="sidebar-section-header">
-          <span>Playlists</span>
-          <button id="newPlaylistBtn" class="add-playlist-btn" title="New Playlist">+</button>
+        <!-- Discover More -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-header"><span>Discover More</span></div>
+          <ul class="nav-links small">
+            <li onclick="fetchSongs('top trending playlist', true, '🌟 Trending Playlists', 'playlists')"><span class="icon">📈</span> Trending Playlists</li>
+            <li onclick="fetchSongs('news 2026', true, '🆕 New Releases 2026', 'albums')"><span class="icon">💿</span> New Releases</li>
+            <li id="listenTogetherBtn"><span class="icon">&#128101;</span> Listen Together</li>
+          </ul>
         </div>
-        <div id="sidebarPlaylists" class="sidebar-playlists">
-          <p class="playlist-empty-msg">Sign in to create playlists</p>
+
+        <!-- Playlists -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-header">
+            <span>Playlists</span>
+            <button id="newPlaylistBtn" class="add-playlist-btn" title="New Playlist">+</button>
+          </div>
+          <div id="sidebarPlaylists" class="sidebar-playlists">
+            <p class="playlist-empty-msg">Sign in to create playlists</p>
+          </div>
         </div>
       </div>
 
       <!-- Profile / Guest -->
       <div class="sidebar-user" id="sidebarUser">
-        <div class="su-avatar" id="suAvatar">?</div>
+        <div class="su-avatar" id="suAvatar">👤</div>
         <div class="su-meta">
           <div class="su-name" id="suName">Guest</div>
           <div class="su-action" id="suAction">Sign in for more ↗</div>
@@ -88,70 +341,71 @@
     <!-- ── MAIN VIEW ──────────────────────── -->
     <main class="main-view">
       <header class="top-bar">
+        <div class="user-profile" id="userProfile" title="Profile"></div>
+
         <div class="search-container">
           <span class="search-icon">🔍</span>
-          <input type="text" id="searchInput" class="search-input" placeholder="What do you want to listen to?"
+          <input type="text" id="searchInput" class="search-input" placeholder="Search Songs, Albums, Artists…"
             autocomplete="off" />
+          <button id="globalSearchBtn" class="global-search-btn"
+            onclick="fetchGlobalDiscovery(document.getElementById('searchInput').value)" title="Global Discovery">🌏</button>
         </div>
+
         <div class="top-bar-actions">
+          <span id="homeGreeting" class="home-greeting"></span>
           <button id="queueToggleBtn" class="queue-btn" title="Queue">≡</button>
-          <div class="user-profile" id="userProfile" title="Profile"></div>
         </div>
       </header>
 
       <div class="content-scroll" id="contentScroll">
         <div id="loadingIndicator" class="loading-indicator" style="display:none;">
-          <!-- Skeleton cards -->
           <div class="skeleton-grid">
-            <div class="skeleton-card">
-              <div class="sk-img"></div>
-              <div class="sk-line l1"></div>
-              <div class="sk-line l2"></div>
-            </div>
-            <div class="skeleton-card">
-              <div class="sk-img"></div>
-              <div class="sk-line l1"></div>
-              <div class="sk-line l2"></div>
-            </div>
-            <div class="skeleton-card">
-              <div class="sk-img"></div>
-              <div class="sk-line l1"></div>
-              <div class="sk-line l2"></div>
-            </div>
-            <div class="skeleton-card">
-              <div class="sk-img"></div>
-              <div class="sk-line l1"></div>
-              <div class="sk-line l2"></div>
-            </div>
-            <div class="skeleton-card">
-              <div class="sk-img"></div>
-              <div class="sk-line l1"></div>
-              <div class="sk-line l2"></div>
-            </div>
+            <div class="skeleton-card"><div class="sk-img"></div><div class="sk-line l1"></div><div class="sk-line l2"></div></div>
+            <div class="skeleton-card"><div class="sk-img"></div><div class="sk-line l1"></div><div class="sk-line l2"></div></div>
+            <div class="skeleton-card"><div class="sk-img"></div><div class="sk-line l1"></div><div class="sk-line l2"></div></div>
+            <div class="skeleton-card"><div class="sk-img"></div><div class="sk-line l1"></div><div class="sk-line l2"></div></div>
+            <div class="skeleton-card"><div class="sk-img"></div><div class="sk-line l1"></div><div class="sk-line l2"></div></div>
           </div>
         </div>
 
         <!-- Home View -->
         <div id="homeView">
-          <!-- Featured Hero Banner -->
-          <div id="homeHero" class="home-hero" style="display:none;">
-            <img id="heroBgcImg" class="hero-bg-img" alt=""
-              onerror="this.onerror=null; this.src=this.dataset.fallback;" />
-            <div class="hero-overlay"></div>
-            <div class="hero-content">
-              <span class="hero-chip">🔥 TRENDING SPOTLIGHT</span>
-              <h1 id="heroTitle" class="hero-h1">Loading...</h1>
-              <p id="heroArtist" class="hero-p">...</p>
-              <div class="hero-actions">
-                <button id="heroPlayBtn" class="hero-play">▶ Play Now</button>
-              </div>
+          <div id="homeRowsContainer"></div>
+          <div id="gridContainer" style="display:none; padding:20px 0;">
+            <div class="grid-header">
+              <button class="grid-back-btn" onclick="loadHomeCategories()" title="Back to Home">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20">
+                  <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+              </button>
+              <h2 id="homeTitle" class="section-title" style="margin:0;">Trending Now</h2>
             </div>
+            <div id="posterGrid" class="cards-grid"></div>
           </div>
 
-          <div id="homeRowsContainer"></div>
-          <div id="gridContainer" style="display:none;">
-            <h2 id="homeTitle" class="section-title">Trending Now</h2>
-            <div id="posterGrid" class="cards-grid"></div>
+          <!-- Global Discovery Multi-Grid -->
+          <div id="multiGridContainer" style="display:none; padding:20px 0;">
+            <div class="grid-header">
+              <button class="grid-back-btn" onclick="loadHomeCategories()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20">
+                  <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+              </button>
+              <h2 id="discoveryTitle" class="section-title">Discovery Hub</h2>
+            </div>
+
+            <div class="discovery-section">
+              <h3 class="discovery-subtitle">Albums</h3>
+              <div id="albumGrid" class="cards-grid"></div>
+            </div>
+            <div class="discovery-section">
+              <h3 class="discovery-subtitle">Artists</h3>
+              <div id="artistGrid" class="cards-grid artist-grid-circle"></div>
+            </div>
+            <div class="discovery-section">
+              <h3 class="discovery-subtitle">Playlists</h3>
+              <div id="playlistGrid" class="cards-grid"></div>
+            </div>
           </div>
         </div>
 
@@ -171,13 +425,10 @@
         <!-- Profile View -->
         <div id="profileView" style="display:none;">
           <div class="profile-hero">
-            <div class="profile-avatar-wrapper" onclick="document.getElementById('avatarUpload').click()"
-              title="Change Profile Picture">
-              <div class="profile-avatar-big" id="profileAvatarBig"
-                style="background-size:cover; background-position:center;">?</div>
+            <div class="profile-avatar-wrapper" onclick="document.getElementById('avatarUpload').click()" title="Change Profile Picture">
+              <div class="profile-avatar-big" id="profileAvatarBig" style="background-size:cover;background-position:center;">?</div>
               <div class="avatar-edit-overlay">📷 Update</div>
-              <input type="file" id="avatarUpload" accept="image/*" style="display:none;"
-                onchange="handleAvatarUpload(event)">
+              <input type="file" id="avatarUpload" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
             </div>
             <div class="profile-details">
               <div class="profile-badge-row">
@@ -187,58 +438,38 @@
               <h1 class="profile-name" id="profileNameEl">Guest</h1>
               <p class="profile-email" id="profileEmailEl">Not signed in</p>
             </div>
-
             <div class="live-visualizer">
-              <div class="lv-bar"></div>
-              <div class="lv-bar"></div>
-              <div class="lv-bar"></div>
-              <div class="lv-bar"></div>
-              <div class="lv-bar"></div>
+              <div class="lv-bar"></div><div class="lv-bar"></div><div class="lv-bar"></div>
+              <div class="lv-bar"></div><div class="lv-bar"></div>
               <span>High-Res Active</span>
             </div>
           </div>
 
           <div class="profile-stats-row">
-            <div class="pstat"><span id="pstatLiked">0</span>
-              <p>Liked</p>
-            </div>
-            <div class="pstat"><span id="pstatPlaylists">0</span>
-              <p>Playlists</p>
-            </div>
-            <div class="pstat"><span id="pstatPlayed">0</span>
-              <p>Played</p>
-            </div>
+            <div class="pstat"><span id="pstatLiked">0</span><p>Liked</p></div>
+            <div class="pstat"><span id="pstatPlaylists">0</span><p>Playlists</p></div>
+            <div class="pstat"><span id="pstatPlayed">0</span><p>Played</p></div>
           </div>
 
           <div class="premium-features-card">
             <h3>Premium Audio Engine</h3>
             <div class="feature-toggle-row">
-              <div>
-                <h4>Lossless Audio (320kbps)</h4>
-                <p>Stream music in crystal clear master quality.</p>
-              </div>
+              <div><h4>Lossless Audio (320kbps)</h4><p>Stream music in crystal clear master quality.</p></div>
               <label class="switch"><input type="checkbox" checked><span class="slider round"></span></label>
             </div>
             <div class="feature-toggle-row">
-              <div>
-                <h4>Spatial Audio Effects</h4>
-                <p>Immersive 3D sound environment processing.</p>
-              </div>
+              <div><h4>Spatial Audio Effects</h4><p>Immersive 3D sound environment processing.</p></div>
               <label class="switch"><input type="checkbox"><span class="slider round"></span></label>
             </div>
             <div class="feature-toggle-row">
-              <div>
-                <h4>Zero Ads & Offline Caching</h4>
-                <p>Uninterrupted listening anywhere.</p>
-              </div>
+              <div><h4>Zero Ads &amp; Offline Caching</h4><p>Uninterrupted listening anywhere.</p></div>
               <label class="switch"><input type="checkbox" checked><span class="slider round"></span></label>
             </div>
           </div>
 
           <div class="settings-matrix">
-            <!-- Profile & Privacy -->
             <div class="settings-card profile-edit-card">
-              <h3>Settings & Privacy</h3>
+              <h3>Settings &amp; Privacy</h3>
               <div class="input-row">
                 <div class="input-group">
                   <label>Full Name</label>
@@ -246,8 +477,7 @@
                 </div>
                 <div class="input-group">
                   <label>Email Address</label>
-                  <input type="email" id="editEmail" class="settings-input" disabled style="opacity:0.6;"
-                    placeholder="Sign in to view">
+                  <input type="email" id="editEmail" class="settings-input" disabled style="opacity:0.6;" placeholder="Sign in to view">
                 </div>
               </div>
               <div class="input-row">
@@ -270,44 +500,38 @@
                   <label>Mobile Number</label>
                   <input type="tel" id="editPhone" class="settings-input" placeholder="+91 xxxxxxxxxx">
                 </div>
-                <div class="input-group" style="opacity:0;pointer-events:none;"></div> <!-- Spacer -->
+                <div class="input-group" style="opacity:0;pointer-events:none;"></div>
               </div>
               <button class="settings-btn" onclick="updateProfileData()">Save Details</button>
             </div>
 
-            <!-- App Theme Engine -->
             <div class="settings-card">
               <h3>App Theme</h3>
-              <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px;">Select global interface aesthetic
-              </p>
+              <p style="font-size:13px;color:var(--muted2);margin-bottom:14px;">Select global interface aesthetic</p>
               <div class="theme-options">
-                <button class="theme-btn active" id="theme_luca" onclick="setThemeSettings('luca')">
+                <button class="theme-btn active" id="theme_luca"    onclick="setThemeSettings('luca')">
                   <div class="t-circle luca-theme"></div> Luca Blue
                 </button>
                 <button class="theme-btn" id="theme_spotify" onclick="setThemeSettings('spotify')">
                   <div class="t-circle spotify-theme"></div> Dark Mode
                 </button>
-                <button class="theme-btn" id="theme_glass" onclick="setThemeSettings('glass')">
+                <button class="theme-btn" id="theme_glass"   onclick="setThemeSettings('glass')">
                   <div class="t-circle glass-theme"></div> Glassmorphism
                 </button>
               </div>
             </div>
 
-            <!-- Feedback Portal -->
             <div class="settings-card feedback-card">
               <h3>📬 Send Feedback</h3>
-              <p style="font-size:12.5px; color:var(--muted2); margin-bottom:14px; line-height:1.5;">Got a bug, idea or
-                feature request? We read everything!</p>
+              <p style="font-size:12.5px;color:var(--muted2);margin-bottom:14px;line-height:1.5;">Got a bug, idea or feature request? We read everything!</p>
               <div class="input-group">
-                <textarea id="feedbackText" class="settings-input" rows="4"
-                  placeholder="What should we add, fix, or improve?"></textarea>
+                <textarea id="feedbackText" class="settings-input" rows="4" placeholder="What should we add, fix, or improve?"></textarea>
               </div>
-              <a class="settings-btn feedback-submit-btn" id="feedbackLink" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">
+              <a class="settings-btn feedback-submit-btn" id="feedbackLink" onclick="submitFeedback()" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;">
                 Send Feedback ✉️
               </a>
             </div>
 
-            <!-- Security -->
             <div class="settings-card">
               <h3>Security</h3>
               <div class="input-group">
@@ -317,35 +541,29 @@
               <button class="settings-btn warning" onclick="updateUserPassword()">Update Password</button>
             </div>
 
-            <!-- Contact Us -->
             <div class="settings-card contact-card">
-              <h3>🤝 Contact US</h3>
-              <p style="font-size:12.5px;color:var(--muted2);margin-bottom:16px;line-height:1.5;">Built with ❤️ by the
-                LucaVerse team. Reach out anytime.</p>
+              <h3>🤝 Contact Us</h3>
+              <p style="font-size:12.5px;color:var(--muted2);margin-bottom:16px;line-height:1.5;">Built with ❤️ by the LucaVerse team. Reach out anytime.</p>
               <div class="contact-links">
                 <a class="contact-link" href="mailto:varungupta31009@gmail.com">
                   <span class="cl-icon">📧</span>
-                  <div class="cl-info"><span class="cl-label">Email</span><span
-                      class="cl-val">varungupta31009@gmail.com</span></div>
+                  <div class="cl-info"><span class="cl-label">Email</span><span class="cl-val">varungupta31009@gmail.com</span></div>
                 </a>
                 <a class="contact-link" href="https://github.com/PiyushG009" target="_blank" rel="noopener">
-                  <span class="cl-icon">👨&zwj;💻</span>
+                  <span class="cl-icon">👨‍💻</span>
                   <div class="cl-info"><span class="cl-label">GitHub</span><span class="cl-val">@PiyushG009</span></div>
                 </a>
                 <a class="contact-link" href="https://www.linkedin.com/in/piyushg009/" target="_blank" rel="noopener">
                   <span class="cl-icon">💼</span>
-                  <div class="cl-info"><span class="cl-label">LinkedIn</span><span class="cl-val">Connect with us</span>
-                  </div>
+                  <div class="cl-info"><span class="cl-label">LinkedIn</span><span class="cl-val">Connect with us</span></div>
                 </a>
               </div>
             </div>
           </div>
 
           <div class="profile-actions">
-            <button id="profileSignInBtn" class="profile-btn-primary" style="display:none;"
-              onclick="window.location.href='auth.html'">Sign In / Edit</button>
-            <button id="profileLogoutBtn" class="profile-btn-danger" style="display:none;" onclick="handleLogout()">Log
-              Out</button>
+            <button id="profileSignInBtn" class="profile-btn-primary" style="display:none;" onclick="window.location.href='auth.html'">Sign In / Edit</button>
+            <button id="profileLogoutBtn" class="profile-btn-danger"  style="display:none;" onclick="handleLogout()">Log Out</button>
           </div>
         </div>
 
@@ -359,60 +577,70 @@
               <p id="pdCount" class="pd-count">0 songs</p>
               <div class="pd-actions">
                 <button class="pd-play-btn" onclick="playPlaylist()">▶ Play All</button>
-                <button class="pd-del-btn" onclick="deleteCurrentPlaylist()">Delete</button>
+                <button class="pd-del-btn"  onclick="deleteCurrentPlaylist()">Delete</button>
               </div>
             </div>
           </div>
           <div id="pdTrackList" class="track-list"></div>
         </div>
 
-        <div id="bottomLoader"
-          style="height:20px;text-align:center;color:var(--accent-1);margin-top:20px;display:none;">Loading more…</div>
+        <div id="bottomLoader" style="height:20px;text-align:center;color:var(--accent-1);margin-top:20px;display:none;">
+          Loading more…
+        </div>
       </div>
     </main>
   </div>
 
   <!-- ── PLAYER BAR ─────────────────────── -->
-  <footer class="player-bar">
-    <div class="now-playing-info">
-      <img id="cover" class="cover-small" src="https://picsum.photos/300?random=10" alt="Cover" />
+  <footer class="player-bar" id="playerBar">
+    <div class="now-playing-info" id="nowPlayingClickable" title="Expand Player">
+      <img id="cover" class="cover-small" src="" alt="Cover" />
       <div class="meta-small">
-        <div id="trackTitle" class="title-small">Track Title</div>
+        <div class="title-small-wrap">
+          <div id="trackTitle" class="title-small">Track Title</div>
+        </div>
         <div id="trackArtist" class="artist-small">Artist</div>
       </div>
       <button id="nowPlayingLikeBtn" class="like-btn" title="Save to Liked Songs">🤍</button>
     </div>
 
     <div class="player-controls-center">
-      <div class="controls">
-        <button id="shuffleBtn" class="btn icon-btn" title="Shuffle">🔀</button>
-        <button id="prevBtn" class="btn icon-btn" title="Previous">⏮</button>
-        <button id="playPauseBtn" class="btn primary-btn" title="Play">▶</button>
-        <button id="nextBtn" class="btn icon-btn" title="Next">⏭</button>
-        <button id="repeatBtn" class="btn icon-btn" title="Repeat">🔁</button>
+      <div class="controls-main">
+        <button id="shuffleBtn" class="btn icon-btn sub-ctrl" title="Shuffle">🔀</button>
+        <button id="prevBtn"    class="btn icon-btn" title="Previous">⏮</button>
+        <button id="playPauseBtn" class="btn primary-play-btn" title="Play">▶</button>
+        <button id="nextBtn"    class="btn icon-btn" title="Next">⏭</button>
+        <button id="repeatBtn"  class="btn icon-btn sub-ctrl" title="Repeat">🔁</button>
       </div>
-      <div class="progress-wrap">
-        <span id="currentTime">0:00</span>
-        <div id="progressContainer" class="progress-container">
-          <div id="progress" class="progress"></div>
+      <div class="progress-container-alt">
+        <span id="currentTime" class="time-label">0:00</span>
+        <div id="progressContainer" class="progress-track">
+          <div id="progress" class="progress-fill"></div>
         </div>
-        <span id="duration">0:00</span>
+        <span id="duration" class="time-label">0:00</span>
       </div>
     </div>
 
     <div class="vol-container">
-      <button id="muteBtn" class="btn icon-btn" title="Mute">🔈</button>
-      <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume" />
-      <button id="queueBtn" class="btn icon-btn" title="Queue" onclick="toggleQueue()">≡</button>
+      <div class="np-waveform" id="miniWaveform"></div>
+      <div class="volume-hover-wrap">
+        
+      <button id="muteBtn" class="btn icon-btn-vol" title="Mute">🔈</button>
+      <input id="volume" class="vol-slider-alt gradient-slider" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume" />
+      </div>
+      <button id="listenTogetherPlayerBtn" class="btn icon-btn-sync" title="Listen Together">LT</button>
+      <button id="queueBtn" class="btn icon-btn-q" title="Queue" onclick="toggleQueue()">≡</button>
     </div>
   </footer>
 
   <audio id="audio" crossorigin="anonymous" preload="metadata"></audio>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <!-- Scripts — order matters -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <script src="app.js"></script>
-</body>
+  <script src="nowplaying.js"></script>
 
+</body>
 </html>
