@@ -78,18 +78,25 @@
         <h3>Luca-Sync</h3>
         <button class="modal-close" onclick="closeSyncModal()">âœ•</button>
       </div>
-      <p class="sync-modal-copy">Start a room or join one with a code to listen together.</p>
+      <p class="sync-modal-copy">Create or join a live room. Up to 8 listeners can control play, pause, seek, and track changes together.</p>
       <div class="sync-room-grid">
         <button class="sync-room-action" onclick="createSyncRoom()">
           <span class="sync-room-icon">&#127911;</span>
           <strong>Create Room</strong>
-          <span>Generate a room code and invite your crew.</span>
+          <span>Generate a room code, stay connected, and invite your crew.</span>
         </button>
         <div class="sync-room-panel">
           <label class="sync-room-label" for="syncRoomCode">Join with code</label>
           <input type="text" id="syncRoomCode" class="modal-input sync-room-input" maxlength="12" placeholder="Enter room code" />
           <button class="modal-create-btn sync-room-join" onclick="joinSyncRoom()">Join Room</button>
         </div>
+      </div>
+      <div class="sync-room-meta" id="syncRoomMeta">
+        <div class="sync-room-badge" id="syncRoomCodeBadge">No active room</div>
+        <div class="sync-room-badge" id="syncRoomMembers">0 / 8 listeners</div>
+      </div>
+      <div class="sync-room-actions">
+        <button id="syncLeaveBtn" class="sync-room-leave" onclick="leaveSyncRoom()">Leave Room</button>
       </div>
       <div id="syncRoomStatus" class="sync-room-status">Room sync foundation is ready.</div>
     </div>

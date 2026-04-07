@@ -84,6 +84,18 @@ let lastRecommendationSeed = ''
 // FIX: race-condition guard for fetchSuggestions
 let _suggestionAbortId = null
 
+const LUCA_SYNC_STORAGE_KEY = 'luca_sync_active_room'
+const LUCA_SYNC_MEMBER_LIMIT = 8
+let lucaSyncChannel = null
+let lucaSyncRoomCode = ''
+let lucaSyncSuppressOutgoing = false
+let lucaSyncParticipantId = localStorage.getItem('luca_sync_participant_id') || `guest-${Math.random().toString(36).slice(2, 10)}`
+let lucaSyncLastSnapshotAt = 0
+let lucaSyncLastAppliedAt = 0
+let lucaSyncMemberCount = 0
+let lucaSyncSeekTimer = null
+localStorage.setItem('luca_sync_participant_id', lucaSyncParticipantId)
+
 // ── API CONFIG ─────────────────────────────────────────────
 const API_CONFIG = {
   PRIMARY: 'https://luca-jiosaavn-api.vercel.app',
@@ -504,9 +516,8 @@ function openSyncModal() {
   const modal = document.getElementById('syncModal')
   if (!modal) return
   const codeInput = document.getElementById('syncRoomCode')
-  const status = document.getElementById('syncRoomStatus')
-  if (codeInput) codeInput.value = ''
-  if (status) status.textContent = 'Room sync foundation is ready.'
+  if (codeInput) codeInput.value = lucaSyncRoomCode || ''
+  updateSyncRoomUi()
   modal.style.display = 'flex'
   setTimeout(() => codeInput?.focus(), 60)
 }
@@ -516,34 +527,294 @@ function closeSyncModal() {
   if (modal) modal.style.display = 'none'
 }
 
-function createSyncRoom() {
-  const code = `LUCA-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
-  const room = {
-    code,
-    createdAt: Date.now(),
-    hostTrackId: playQueue[playIndex]?.id || null,
-    hostTrackTitle: playQueue[playIndex]?.title || null,
+function normalizeSyncRoomCode(value = '') {
+  const cleaned = String(value)
+    .toUpperCase()
+    .replace(/^LUCA-?/i, '')
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 8)
+  return cleaned ? `LUCA-${cleaned}` : ''
+}
+
+function getSyncParticipantName() {
+  return currentUser?.user_metadata?.full_name
+      || currentUser?.user_metadata?.name
+      || currentUser?.email?.split('@')[0]
+      || localStorage.getItem('luca_guest_name')
+      || 'Guest'
+}
+
+function getSyncParticipantAvatar() {
+  return currentUser?.user_metadata?.avatar_url
+      || currentUser?.user_metadata?.picture
+      || currentUser?.user_metadata?.avatar
+      || currentUser?.identities?.[0]?.identity_data?.avatar_url
+      || currentUser?.identities?.[0]?.identity_data?.picture
+      || localStorage.getItem('luca_guest_avatar')
+      || ''
+}
+
+function getSyncRoomStatusEl() {
+  return document.getElementById('syncRoomStatus')
+}
+
+function setSyncRoomStatus(message, kind = 'info') {
+  const status = getSyncRoomStatusEl()
+  if (!status) return
+  status.textContent = message
+  status.dataset.kind = kind
+}
+
+function getSyncPresenceCount(channel = lucaSyncChannel) {
+  if (!channel?.presenceState) return 0
+  const state = channel.presenceState()
+  return Object.values(state).reduce((count, entries) => count + (Array.isArray(entries) ? entries.length : 0), 0)
+}
+
+function updateSyncRoomUi() {
+  const badge = document.getElementById('syncRoomCodeBadge')
+  const members = document.getElementById('syncRoomMembers')
+  const leaveBtn = document.getElementById('syncLeaveBtn')
+  if (badge) badge.textContent = lucaSyncRoomCode || 'No active room'
+  if (members) members.textContent = `${lucaSyncMemberCount} / ${LUCA_SYNC_MEMBER_LIMIT} listeners`
+  if (leaveBtn) leaveBtn.style.display = lucaSyncRoomCode ? 'inline-flex' : 'none'
+  if (!lucaSyncRoomCode) setSyncRoomStatus('Create a room or join one with a code to listen together.', 'info')
+}
+
+function getSyncStateQueue() {
+  return playQueue.slice(0, 20).map((track) => ({
+    id: track.id,
+    apiSongId: track.apiSongId || track.id,
+    src: track.src,
+    title: track.title,
+    artist: track.artist,
+    album: track.album,
+    cover: track.cover,
+    duration: track.duration,
+    language: track.language || '',
+    hasLyrics: !!track.hasLyrics
+  }))
+}
+
+function buildSyncPlaybackState(reason = 'snapshot') {
+  const track = playQueue[playIndex]
+  if (!track) return null
+  return {
+    roomCode: lucaSyncRoomCode,
+    reason,
+    sentAt: Date.now(),
+    sentBy: lucaSyncParticipantId,
+    position: Number(audio.currentTime || 0),
+    isPlaying,
+    playIndex,
+    queue: getSyncStateQueue(),
+    track: {
+      id: track.id,
+      apiSongId: track.apiSongId || track.id,
+      src: track.src,
+      title: track.title,
+      artist: track.artist,
+      album: track.album,
+      cover: track.cover,
+      duration: track.duration,
+      language: track.language || '',
+      hasLyrics: !!track.hasLyrics
+    }
   }
-  localStorage.setItem('luca_sync_room', JSON.stringify(room))
-  const status = document.getElementById('syncRoomStatus')
-  if (status) status.textContent = `Room created: ${code}`
+}
+
+async function sendSyncBroadcast(event, payload) {
+  if (!lucaSyncChannel) return
+  try {
+    await lucaSyncChannel.send({
+      type: 'broadcast',
+      event,
+      payload
+    })
+  } catch (_) {}
+}
+
+async function broadcastCurrentSyncState(reason = 'update', force = false) {
+  if (!lucaSyncRoomCode || !lucaSyncChannel || lucaSyncSuppressOutgoing) return
+  const state = buildSyncPlaybackState(reason)
+  if (!state) return
+  if (!force && Date.now() - lucaSyncLastSnapshotAt < 250) return
+  lucaSyncLastSnapshotAt = Date.now()
+  await sendSyncBroadcast('player-state', { state })
+}
+
+async function applyRemoteSyncState(state) {
+  if (!state?.track || state.sentBy === lucaSyncParticipantId) return
+  if (state.sentAt && state.sentAt <= lucaSyncLastAppliedAt) return
+  lucaSyncLastAppliedAt = state.sentAt || Date.now()
+  lucaSyncSuppressOutgoing = true
+
+  try {
+    const incomingQueue = Array.isArray(state.queue) && state.queue.length ? state.queue : [state.track]
+    const normalizedQueue = incomingQueue.map((track) => ({
+      ...track,
+      cover: getPreferredImageUrl(track.cover) || createGeneratedPosterArt(track)
+    }))
+    const nextIndex = Math.max(0, Math.min(Number(state.playIndex) || 0, normalizedQueue.length - 1))
+    const incomingTrack = normalizedQueue[nextIndex] || normalizedQueue[0]
+    const currentTrack = playQueue[playIndex]
+    const trackChanged = !currentTrack || currentTrack.id !== incomingTrack.id || currentTrack.src !== incomingTrack.src
+
+    playQueue = normalizedQueue
+    playIndex = nextIndex
+
+    if (trackChanged) {
+      loadTrack(playIndex)
+      await new Promise((resolve) => {
+        const finish = () => resolve()
+        audio.addEventListener('loadedmetadata', finish, { once: true })
+        setTimeout(finish, 900)
+      })
+    }
+
+    const desiredTime = Number(state.position) || 0
+    if (Number.isFinite(desiredTime) && Math.abs((audio.currentTime || 0) - desiredTime) > 1.4) {
+      try { audio.currentTime = desiredTime } catch (_) {}
+    }
+
+    if (state.isPlaying) await play()
+    else pause()
+
+    renderQueue()
+    setSyncRoomStatus(`${state.track.title} synced by ${state.track.artist}`, 'success')
+  } catch (err) {
+    console.error('Luca-Sync apply failed:', err)
+  } finally {
+    setTimeout(() => { lucaSyncSuppressOutgoing = false }, 600)
+  }
+}
+
+function handleSyncPresenceUpdate() {
+  lucaSyncMemberCount = getSyncPresenceCount()
+  updateSyncRoomUi()
+  if (lucaSyncMemberCount > LUCA_SYNC_MEMBER_LIMIT) {
+    showToast('This room is full. Max 8 listeners.', 'error')
+    leaveSyncRoom(true)
+  }
+}
+
+async function joinSyncChannel(code) {
+  const normalizedCode = normalizeSyncRoomCode(code)
+  if (!normalizedCode) {
+    showToast('Enter a valid room code', 'error')
+    return false
+  }
+
+  if (lucaSyncRoomCode === normalizedCode && lucaSyncChannel) {
+    updateSyncRoomUi()
+    setSyncRoomStatus(`Connected to ${normalizedCode}`, 'success')
+    return true
+  }
+
+  if (lucaSyncChannel) leaveSyncRoom(true)
+
+  lucaSyncRoomCode = normalizedCode
+  localStorage.setItem(LUCA_SYNC_STORAGE_KEY, normalizedCode)
+  lucaSyncMemberCount = 1
+  updateSyncRoomUi()
+  setSyncRoomStatus(`Connecting to ${normalizedCode}…`, 'info')
+
+  const channel = db.channel(`luca-sync:${normalizedCode}`, {
+    config: {
+      broadcast: { self: false },
+      presence: { key: lucaSyncParticipantId }
+    }
+  })
+
+  channel
+    .on('broadcast', { event: 'player-state' }, ({ payload }) => applyRemoteSyncState(payload?.state))
+    .on('broadcast', { event: 'state-request' }, async ({ payload }) => {
+      if (!payload || payload.requestedBy === lucaSyncParticipantId) return
+      await new Promise(resolve => setTimeout(resolve, 120 + Math.floor(Math.random() * 180)))
+      await broadcastCurrentSyncState('room-sync', true)
+    })
+    .on('presence', { event: 'sync' }, () => {
+      handleSyncPresenceUpdate()
+    })
+
+  lucaSyncChannel = channel
+
+  channel.subscribe(async (status) => {
+    if (status === 'SUBSCRIBED') {
+      await channel.track({
+        id: lucaSyncParticipantId,
+        name: getSyncParticipantName(),
+        avatar: getSyncParticipantAvatar(),
+        joinedAt: Date.now()
+      })
+      handleSyncPresenceUpdate()
+      setSyncRoomStatus(`Connected to ${normalizedCode}. Any listener can control playback.`, 'success')
+      showToast(`Luca-Sync active: ${normalizedCode}`, 'success')
+      await sendSyncBroadcast('state-request', {
+        requestedBy: lucaSyncParticipantId,
+        roomCode: normalizedCode,
+        requestedAt: Date.now()
+      })
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      setSyncRoomStatus('Room connection dropped. Retrying…', 'error')
+    } else if (status === 'CLOSED') {
+      if (lucaSyncRoomCode === normalizedCode) {
+        setSyncRoomStatus(`Disconnected from ${normalizedCode}`, 'info')
+      }
+    }
+  })
+
+  return true
+}
+
+function createSyncRoom() {
+  const code = normalizeSyncRoomCode(Math.random().toString(36).slice(2, 8))
   const codeInput = document.getElementById('syncRoomCode')
   if (codeInput) codeInput.value = code
-  showToast(`Room ${code} is ready to share`, 'success')
+  joinSyncChannel(code)
 }
 
 function joinSyncRoom() {
   const input = document.getElementById('syncRoomCode')
-  const status = document.getElementById('syncRoomStatus')
-  const code = input?.value.trim().toUpperCase()
+  const code = normalizeSyncRoomCode(input?.value.trim().replace(/^LUCA-?/i, ''))
   if (!code) {
     showToast('Enter a room code first', 'error')
     return
   }
-  localStorage.setItem('luca_sync_joined_room', code)
-  if (status) status.textContent = `Joined room: ${code}`
-  showToast(`Joined ${code}. Real-time sync hooks are ready.`, 'success')
+  if (input) input.value = code
+  joinSyncChannel(code)
 }
+
+function leaveSyncRoom(silent = false) {
+  localStorage.removeItem(LUCA_SYNC_STORAGE_KEY)
+  const activeCode = lucaSyncRoomCode
+  lucaSyncRoomCode = ''
+  lucaSyncMemberCount = 0
+  lucaSyncLastSnapshotAt = 0
+  lucaSyncLastAppliedAt = 0
+  if (lucaSyncChannel) {
+    try { lucaSyncChannel.untrack?.() } catch (_) {}
+    try { db.removeChannel?.(lucaSyncChannel) } catch (_) {}
+    try { lucaSyncChannel.unsubscribe?.() } catch (_) {}
+    lucaSyncChannel = null
+  }
+  updateSyncRoomUi()
+  if (!silent && activeCode) {
+    setSyncRoomStatus(`Left ${activeCode}`, 'info')
+    showToast(`Left ${activeCode}`, 'info')
+  }
+}
+
+function restoreSyncRoom() {
+  const savedCode = localStorage.getItem(LUCA_SYNC_STORAGE_KEY)
+  if (savedCode) joinSyncChannel(savedCode)
+}
+
+window.addEventListener('beforeunload', () => {
+  if (lucaSyncChannel) {
+    try { lucaSyncChannel.untrack?.() } catch (_) {}
+  }
+})
 
 // ══════════════════════════════════════════════════════════
 //  CUSTOM NEW PLAYLIST MODAL (replaces prompt())
@@ -1890,6 +2161,7 @@ function loadTrack(index) {
   progressEl.style.width = '0%'; currentTimeEl.textContent = '0:00'; durationEl.textContent = '0:00'
   audio.load(); renderQueue()
   saveSession()
+  if (!lucaSyncSuppressOutgoing) broadcastCurrentSyncState('track-change', true)
 
   // FIX: prevent stale suggestions from corrupting queue
   if (track.id) fetchSuggestions(track.id)
@@ -1959,11 +2231,23 @@ function restoreSession() {
 
 function play() {
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume()
-  audio.play()
-    .then(() => { isPlaying = true; updatePlayButton(); if (coverTween) coverTween.play(); initAudioContext() })
+  return audio.play()
+    .then(() => {
+      isPlaying = true
+      updatePlayButton()
+      if (coverTween) coverTween.play()
+      initAudioContext()
+      if (!lucaSyncSuppressOutgoing) broadcastCurrentSyncState('play', true)
+    })
     .catch(err => console.error('Playback error:', err))
 }
-function pause() { audio.pause(); isPlaying = false; updatePlayButton(); if (coverTween) coverTween.pause() }
+function pause() {
+  audio.pause()
+  isPlaying = false
+  updatePlayButton()
+  if (coverTween) coverTween.pause()
+  if (!lucaSyncSuppressOutgoing) broadcastCurrentSyncState('pause', true)
+}
 function togglePlay() { isPlaying ? pause() : play() }
 function updatePlayButton() {
   playPauseBtn.textContent = isPlaying ? '⏸' : '▶'
@@ -2405,6 +2689,10 @@ function attachEvents() {
     const r = progressContainer.getBoundingClientRect()
     const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left
     audio.currentTime = Math.max(0, Math.min(1, x / r.width)) * (audio.duration || 0)
+    if (!lucaSyncSuppressOutgoing) {
+      clearTimeout(lucaSyncSeekTimer)
+      lucaSyncSeekTimer = setTimeout(() => broadcastCurrentSyncState('seek', true), 160)
+    }
   }
   progressContainer.addEventListener('click', seekAt)
   progressContainer.addEventListener('pointerdown', (e) => { isSeeking = true; progressContainer.setPointerCapture(e.pointerId); seekAt(e) })
@@ -2723,6 +3011,8 @@ async function boot() {
   gsap.from('.top-bar',    { y: -20, opacity: 0, duration: .5, delay: .25, ease: 'power2.out' })
   coverTween = gsap.to(coverEl, { scale: 1.04, boxShadow: '0 10px 20px rgba(0,242,254,.3)', duration: 2, repeat: -1, yoyo: true, ease: 'sine.inOut', paused: true })
   restoreSession()
+  updateSyncRoomUi()
+  restoreSyncRoom()
   setInterval(() => { if (isPlaying) saveSession() }, 5000)
   loadHomeCategories()
 }
