@@ -176,19 +176,120 @@ const LUCA_VINYL_PLACEHOLDER = `data:image/svg+xml;utf8,${encodeURIComponent(`
 `)}` 
 
 let vibeFrameId = 0
+const songPosterCache = new Map()
+
+function normalizePosterUrl(url) {
+  if (!url || typeof url !== 'string') return ''
+  return url
+    .trim()
+    .replace(/&amp;/g, '&')
+    .replace(/^http:\/\//i, 'https://')
+    .replace(/\/(50x50|90x90|150x150)\//i, '/500x500/')
+}
+
+function getApiImageAt(images, index = 2) {
+  if (!Array.isArray(images)) return ''
+  return normalizePosterUrl(images?.[index]?.url || '')
+}
 
 function getPreferredImageUrl(images) {
-  return images?.[2]?.url || ''
+  if (!images) return ''
+  if (typeof images === 'string') return normalizePosterUrl(images)
+  if (Array.isArray(images)) {
+    return (
+      getApiImageAt(images, 2) ||
+      getApiImageAt(images, 1) ||
+      getApiImageAt(images, 0) ||
+      normalizePosterUrl(images.find(img => img?.url)?.url || '')
+    )
+  }
+  return normalizePosterUrl(
+    getApiImageAt(images?.image, 2) ||
+    getApiImageAt(images?.image, 1) ||
+    getApiImageAt(images?.image, 0) ||
+    getApiImageAt(images?.album?.image, 2) ||
+    getApiImageAt(images?.album?.image, 1) ||
+    getApiImageAt(images?.album?.image, 0) ||
+    getApiImageAt(images?.artists?.primary?.[0]?.image, 2) ||
+    getApiImageAt(images?.artists?.primary?.[0]?.image, 1) ||
+    getApiImageAt(images?.artists?.primary?.[0]?.image, 0) ||
+    getApiImageAt(images?.artists?.all?.[0]?.image, 2) ||
+    getApiImageAt(images?.artists?.all?.[0]?.image, 1) ||
+    getApiImageAt(images?.artists?.all?.[0]?.image, 0) ||
+    images?.url ||
+    images?.link ||
+    images?.source ||
+    images?.image?.url ||
+    images?.cover ||
+    images?.artwork ||
+    ''
+  )
 }
 
 function getSafeImageUrl(images) {
   return getPreferredImageUrl(images) || LUCA_VINYL_PLACEHOLDER
 }
 
+function primeLucaImage(img, fallbackSrc = LUCA_VINYL_PLACEHOLDER) {
+  if (!img) return
+  img.dataset.lucaFallbackSrc = fallbackSrc || LUCA_VINYL_PLACEHOLDER
+  img.loading = img.loading || 'lazy'
+  img.decoding = 'async'
+  img.referrerPolicy = 'no-referrer'
+  img.addEventListener('error', () => applyLucaImageFallback(img), { once: true })
+  if (!img.getAttribute('src')) applyLucaImageFallback(img)
+}
+
+function hashTrackVisualSeed(value = '') {
+  let hash = 0
+  const str = String(value)
+  for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash) + str.charCodeAt(i)
+  return Math.abs(hash)
+}
+
+function createGeneratedPosterArt(track = {}) {
+  const title = decodeHtmlEntities(track?.title || track?.name || 'LucaVerse')
+  const artist = decodeHtmlEntities(track?.artist || track?.subtitle || 'Signature Track')
+  const seed = hashTrackVisualSeed(`${title}|${artist}`)
+  const hueA = seed % 360
+  const hueB = (seed + 68) % 360
+  const accent = (seed + 140) % 360
+  const initials = title
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase() || '')
+    .join('') || 'LV'
+  const safeTitle = title.slice(0, 26)
+  const safeArtist = artist.slice(0, 24)
+  return `data:image/svg+xml;utf8,${encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+      <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="hsl(${hueA} 88% 56%)"/>
+          <stop offset="100%" stop-color="hsl(${hueB} 76% 48%)"/>
+        </linearGradient>
+        <radialGradient id="glow" cx="22%" cy="18%" r="80%">
+          <stop offset="0%" stop-color="hsla(${accent} 90% 80% / .72)"/>
+          <stop offset="100%" stop-color="hsla(${accent} 90% 40% / 0)"/>
+        </radialGradient>
+      </defs>
+      <rect width="320" height="320" rx="34" fill="#050816"/>
+      <rect width="320" height="320" rx="34" fill="url(#bg)" opacity=".9"/>
+      <rect width="320" height="320" rx="34" fill="url(#glow)"/>
+      <rect x="16" y="16" width="288" height="288" rx="26" fill="rgba(3,7,18,.22)" stroke="rgba(255,255,255,.16)"/>
+      <text x="32" y="112" font-size="86" font-weight="800" fill="rgba(255,255,255,.16)" font-family="Arial, sans-serif">${initials}</text>
+      <text x="32" y="228" font-size="28" font-weight="800" fill="#fff" font-family="Arial, sans-serif">${safeTitle}</text>
+      <text x="32" y="260" font-size="18" fill="rgba(255,255,255,.82)" font-family="Arial, sans-serif">${safeArtist}</text>
+      <text x="32" y="52" font-size="15" letter-spacing="3" fill="rgba(255,255,255,.72)" font-family="Arial, sans-serif">LUCAVERSE</text>
+    </svg>
+  `)}`
+}
+
 function applyLucaImageFallback(img) {
   if (!img || img.dataset.lucaFallbackApplied === 'true') return
   img.dataset.lucaFallbackApplied = 'true'
-  img.src = LUCA_VINYL_PLACEHOLDER
+  img.src = img.dataset.lucaFallbackSrc || LUCA_VINYL_PLACEHOLDER
   img.classList.add('is-fallback-art')
 }
 
@@ -673,13 +774,7 @@ async function createPlaylistFromModal() {
 async function fetchFromMirrors(query, page = 1, limit = 50, type = 'songs') {
   const apiPage = page > 0 ? page - 1 : 0
   const endpoint = `/api/search/${type}?query=${encodeURIComponent(query)}&page=${apiPage}&limit=${limit}`
-  try {
-    const json = await lucaFetch(endpoint)
-    if (json) return json
-    throw new Error('Empty response')
-  } catch (e) {
-    return await lucaFetch(`${API_CONFIG.BACKUP}/api/search/songs?query=${encodeURIComponent(query)}&page=${apiPage}`)
-  }
+  return await lucaFetch(endpoint)
 }
 
 function extractResults(json) {
@@ -774,6 +869,54 @@ function normalizeMatchKey(value) {
     .trim()
 }
 
+function scoreTrackMatch(candidate, track) {
+  const titleVariants = buildLyricsTitleVariants(track)
+  const artistVariants = buildLyricsArtistVariants(track)
+  const candidateTitle = normalizeMatchKey(candidate?.name || candidate?.title || '')
+  const candidateArtist = normalizeMatchKey(candidate?.artists?.primary?.[0]?.name || candidate?.artists?.all?.[0]?.name || candidate?.artist || '')
+  const trackLanguage = normalizeMatchKey(track?.language || '')
+  const candidateLanguage = normalizeMatchKey(candidate?.language || '')
+  let score = 0
+
+  if (titleVariants.some(title => normalizeMatchKey(title) === candidateTitle)) score += 55
+  else if (titleVariants.some(title => candidateTitle.includes(normalizeMatchKey(title)) || normalizeMatchKey(title).includes(candidateTitle))) score += 28
+
+  if (artistVariants.some(artist => normalizeMatchKey(artist) === candidateArtist)) score += 35
+  else if (artistVariants.some(artist => candidateArtist.includes(normalizeMatchKey(artist)) || normalizeMatchKey(artist).includes(candidateArtist))) score += 18
+
+  const duration = Number(track?.duration) || 0
+  const candidateDuration = Number(candidate?.duration) || 0
+  if (duration && candidateDuration) {
+    const delta = Math.abs(duration - candidateDuration)
+    if (delta <= 1) score += 18
+    else if (delta <= 3) score += 10
+    else if (delta > 12) score -= 18
+  }
+
+  if (trackLanguage && candidateLanguage) {
+    if (trackLanguage === candidateLanguage) score += 16
+    else score -= 40
+  }
+
+  return score
+}
+
+function isStrictTrackMatch(candidate, track) {
+  const titleVariants = buildLyricsTitleVariants(track).map(normalizeMatchKey).filter(Boolean)
+  const artistVariants = buildLyricsArtistVariants(track).map(normalizeMatchKey).filter(Boolean)
+  const candidateTitle = normalizeMatchKey(candidate?.name || candidate?.title || candidate?.trackName || '')
+  const candidateArtist = normalizeMatchKey(candidate?.artists?.primary?.[0]?.name || candidate?.artists?.all?.[0]?.name || candidate?.artist || candidate?.artistName || '')
+  const titleExact = titleVariants.some(title => title && title === candidateTitle)
+  const artistStrong = artistVariants.some(artist => artist && (artist === candidateArtist || candidateArtist.includes(artist) || artist.includes(candidateArtist)))
+  const trackLanguage = normalizeMatchKey(track?.language || '')
+  const candidateLanguage = normalizeMatchKey(candidate?.language || '')
+  const duration = Number(track?.duration) || 0
+  const candidateDuration = Number(candidate?.duration) || 0
+  const durationOkay = !duration || !candidateDuration || Math.abs(duration - candidateDuration) <= 8
+  const languageOkay = !trackLanguage || !candidateLanguage || trackLanguage === candidateLanguage
+  return titleExact && artistStrong && durationOkay && languageOkay
+}
+
 function scoreLrclibCandidate(row, titleVariants, artistVariants, duration) {
   if (!row) return -1
   const trackName = normalizeMatchKey(row.trackName || row.name || '')
@@ -818,7 +961,11 @@ async function fetchLrclibLyrics(track) {
       if (!res.ok) continue
       const row = await res.json()
       const payload = normalizeLyricsPayload(row)
-      if (payload) return payload
+      if (payload && isStrictTrackMatch({
+        title: row?.trackName || row?.name,
+        artist: row?.artistName,
+        duration: row?.duration
+      }, track)) return payload
     } catch (_) {}
   }
 
@@ -848,7 +995,7 @@ async function fetchLrclibLyrics(track) {
     }
   }
 
-  if (bestPayload) return bestPayload
+  if (bestPayload && bestScore >= 150) return bestPayload
 
   return null
 }
@@ -868,6 +1015,7 @@ async function fetchLyricsPayload(track) {
     const searchJson = await lucaFetch(`/api/search/songs?query=${q}&page=1&limit=5`, { timeout: 7000 })
     const results = extractResults(searchJson)
     for (const candidate of results) {
+      if (!isStrictTrackMatch(candidate, track) || scoreTrackMatch(candidate, track) < 82) continue
       const payload = normalizeLyricsPayload(candidate)
       if (payload) return { data: candidate }
       if (candidate?.id) {
@@ -920,19 +1068,87 @@ function buildTrackObj(song) {
   if (dur > 0 && dur < 45) return null
   const audioObj = song.downloadUrl?.[4] || song.downloadUrl?.[song.downloadUrl.length - 1]
   if (!audioObj) return null
-  const coverUrl = getSafeImageUrl(song.image)
+  const title = decodeHtmlEntities(song.name || song.title || 'Unknown')
+  const primaryArtist = decodeHtmlEntities(song.artists?.primary?.[0]?.name || song.artists?.all?.[0]?.name || song.primaryArtists || 'Unknown')
+  const coverUrl = getPreferredImageUrl(song) || createGeneratedPosterArt({ title, artist: primaryArtist })
   return {
     id: song.id,
     src: audioObj.url,
-    title: decodeHtmlEntities(song.name || song.title || 'Unknown'),
-    artist: decodeHtmlEntities(song.artists?.primary?.[0]?.name || song.artists?.all?.[0]?.name || 'Unknown'),
+    title,
+    artist: primaryArtist,
     album: decodeHtmlEntities(song.album?.name || 'Single'),
     cover: coverUrl,
     duration: dur,
-    hasLyrics: !!song.hasLyrics
+    hasLyrics: !!song.hasLyrics,
+    language: song.language || '',
+    apiSongId: song.id
   }
 }
 function filterTracks(songs) { return songs.map(buildTrackObj).filter(Boolean) }
+
+function pickVisualDiverseTracks(tracks = [], limit = 24) {
+  const diverse = []
+  const seenTrack = new Set()
+  const seenCover = new Set()
+  const leftovers = []
+
+  tracks.forEach((track) => {
+    const trackKey = track?.id || `${track?.title}|${track?.artist}`
+    const coverKey = track?.cover || ''
+    if (!trackKey || seenTrack.has(trackKey)) return
+    seenTrack.add(trackKey)
+    if (coverKey && !coverKey.includes('data:image') && seenCover.has(coverKey)) {
+      leftovers.push(track)
+      return
+    }
+    if (coverKey && !coverKey.includes('data:image')) seenCover.add(coverKey)
+    diverse.push(track)
+  })
+
+  for (const track of leftovers) {
+    if (diverse.length >= limit) break
+    diverse.push(track)
+  }
+  return diverse
+}
+
+function getDisplayTracks(tracks = [], limit = 24) {
+  return pickVisualDiverseTracks(tracks, limit)
+    .slice(0, limit)
+    .map((track) => ({ ...track, cover: getPreferredImageUrl(track?.cover) || createGeneratedPosterArt(track) }))
+}
+
+function hasNetworkPoster(track) {
+  return !!(track?.cover && typeof track.cover === 'string' && !track.cover.startsWith('data:image'))
+}
+
+async function fetchAccurateSongPoster(songId) {
+  if (!songId) return ''
+  if (songPosterCache.has(songId)) return songPosterCache.get(songId)
+  try {
+    const json = await lucaFetch(`/api/songs/${songId}`, { timeout: 7000 })
+    const root = Array.isArray(json?.data) ? json.data[0] : json?.data
+    const poster = getPreferredImageUrl(root)
+    songPosterCache.set(songId, poster || '')
+    return poster || ''
+  } catch (_) {
+    songPosterCache.set(songId, '')
+    return ''
+  }
+}
+
+async function enrichTracksWithAccuratePosters(tracks = [], limit = 16) {
+  const normalized = tracks.map((track) => ({
+    ...track,
+    cover: getPreferredImageUrl(track?.cover) || createGeneratedPosterArt(track)
+  }))
+  const targets = normalized.filter(track => !hasNetworkPoster(track)).slice(0, limit)
+  await Promise.all(targets.map(async (track) => {
+    const poster = await fetchAccurateSongPoster(track.apiSongId || track.id)
+    if (poster) track.cover = poster
+  }))
+  return normalized
+}
 
 // ── Time-Based Trending ─────────────────────────────────
 function getTimeBasedGreeting() {
@@ -1043,6 +1259,7 @@ function buildArtistCard(artist, imgSrc) {
     <div class="poster-title artist-name-label">${artist.name}</div>
     <div class="poster-subtitle artist-genre-label">${artist.genre || 'Artist'}</div>
   `
+  primeLucaImage(card.querySelector('img'), createGeneratedPosterArt({ title: artist.name, artist: artist.genre || 'Artist' }))
   card.onclick = () => {
     if (artist.id) fetchArtistDetail(artist.id, artist.name)
     else fetchSongs(artist.name, false, `🎤 ${artist.name}`, 'songs')
@@ -1134,6 +1351,8 @@ async function loadHomeCategories() {
           let tracks = filterTracks(results)
           if (cat.id === 'cat_trending') tracks = tracks.filter(isMainstreamTrack)
           tracks = await enrichCategoryTracks(cat, tracks)
+          tracks = await enrichTracksWithAccuratePosters(tracks, 16)
+          tracks = pickVisualDiverseTracks(tracks, 32)
           for (let k = tracks.length - 1; k > 0; k--) {
             const j = Math.floor(Math.random() * (k + 1));[tracks[k], tracks[j]] = [tracks[j], tracks[k]]
           }
@@ -1157,7 +1376,7 @@ async function loadHomeCategories() {
 function renderRow(catId, items) {
   const container = document.getElementById(`cards_${catId}`); if (!container) return
   container.innerHTML = ''
-  const displayItems = items.slice(0, 24)
+  const displayItems = getDisplayTracks(items, 24)
   if (!displayItems.length) {
     const rowEl = document.getElementById(`row_${catId}`)
     if (rowEl) rowEl.style.display = 'none'
@@ -1229,9 +1448,10 @@ async function loadRecommendedRow(forceTrack = null) {
     const cards = document.getElementById('cards_recommended')
     if (cards) {
       cards.innerHTML = ''
-      homeData.recommended.slice(0, 24).forEach((track, i) => {
+      const displayTracks = getDisplayTracks(homeData.recommended, 24)
+      displayTracks.forEach((track, i) => {
         const card = createPosterElement(track, () => {
-          playQueue = [...homeData.recommended]
+          playQueue = [...displayTracks]
           playIndex = i
           loadTrack(i)
           play()
@@ -1249,18 +1469,23 @@ async function loadRecommendedRow(forceTrack = null) {
       const json = await lucaFetch(`/api/songs/${baseTrack.id}/suggestions?limit=25`, { timeout: 8000 })
       tracks = filterTracks(extractResults(json))
     }
-    if (!tracks.length) {
-      const json = await fetchFromMirrors(query, 1, 30, 'songs')
-      tracks = filterTracks(extractResults(json))
+    if ((tracks?.length || 0) < 12 && baseTrack?.artist) {
+      const artistJson = await fetchFromMirrors(`${baseTrack.artist} hits`, 1, 20, 'songs')
+      tracks = mergeUniqueTracks(tracks, filterTracks(extractResults(artistJson)))
     }
-    homeData.recommended = tracks
+    if ((tracks?.length || 0) < 12) {
+      const json = await fetchFromMirrors(query, 1, 30, 'songs')
+      tracks = mergeUniqueTracks(tracks, filterTracks(extractResults(json)))
+    }
+    tracks = await enrichTracksWithAccuratePosters(tracks, 18)
+    homeData.recommended = getDisplayTracks(tracks, 24)
     lastRecommendationSeed = recommendationSeed
     const cards = document.getElementById('cards_recommended')
     if (!cards) return
     cards.innerHTML = ''
-    tracks.slice(0, 24).forEach((track, i) => {
+    homeData.recommended.forEach((track, i) => {
       const card = createPosterElement(track, () => {
-        playQueue = [...tracks]
+        playQueue = [...homeData.recommended]
         playIndex = i
         loadTrack(i)
         play()
@@ -1288,7 +1513,7 @@ function openRecommendationsSeeAll() {
 
 function createGenericPoster(item, type) {
   const card = document.createElement('div'); card.className = 'poster-card'
-  const imgUrl  = getSafeImageUrl(item.image)
+  const imgUrl  = getSafeImageUrl(item)
   const title   = item.name || item.title || 'Untitled'
   const subtitle = item.artists?.primary?.[0]?.name || item.description || (type === 'albums' ? item.year : '') || ''
   card.innerHTML = `
@@ -1326,6 +1551,7 @@ function createPosterElement(t, onClick) {
     <div class="poster-title" title="${t.title}">${t.title}</div>
     <div class="poster-artist" title="${t.artist}">${t.artist}</div>
   `
+  primeLucaImage(card.querySelector('img'), createGeneratedPosterArt(t))
   card.addEventListener('click', (e) => {
     if (e.target.tagName === 'BUTTON' || e.target.classList.contains('like-btn')) return
     onClick()
@@ -1406,7 +1632,7 @@ async function fetchGlobalDiscovery(query) {
     const json = await lucaFetch(`/api/search?query=${encodeURIComponent(query)}`)
     const d = json.data
     if (d.songs?.results?.length) {
-      const topTracks = filterTracks(d.songs.results)
+      const topTracks = await enrichTracksWithAccuratePosters(filterTracks(d.songs.results), 12)
       if (topTracks.length) {
         viewTracks = topTracks
         showView('search')
@@ -1436,12 +1662,16 @@ function renderDiscoveryGrid(gridId, results, type) {
     card.className = type === 'artist' ? 'poster-card artist-circular-card' : 'poster-card'
     card.innerHTML = `
       <div class="image-wrapper${type === 'artist' ? ' artist-circular' : ''}">
-        <img src="${getSafeImageUrl(item.image)}" class="poster-img${type === 'artist' ? ' artist-img' : ''}"/>
+        <img src="${getSafeImageUrl(item)}" class="poster-img${type === 'artist' ? ' artist-img' : ''}"/>
         <div class="play-btn-overlay"><svg fill="#000" viewBox="0 0 24 24" width="24" height="24"><path d="M8 5v14l11-7z"></path></svg></div>
       </div>
       <div class="poster-title">${item.name || item.title}</div>
       <div class="poster-artist">${item.artists?.primary?.[0]?.name || (item.songCount ? item.songCount + ' Songs' : '')}</div>
     `
+    primeLucaImage(card.querySelector('img'), createGeneratedPosterArt({
+      title: item.name || item.title || 'LucaVerse',
+      artist: item.artists?.primary?.[0]?.name || item.songCount || item.type || 'Music'
+    }))
     card.onclick = () => {
       if (type === 'album') fetchAlbumDetail(item.id, item.name)
       else if (type === 'artist') fetchArtistDetail(item.id, item.name)
@@ -1456,7 +1686,7 @@ async function fetchAlbumDetail(id, name) {
   playlistList.innerHTML = renderTrackListSkeleton()
   try {
     const json = await lucaFetch(`/api/albums?id=${id}`)
-    const tracks = filterTracks(json?.data?.songs || [])
+    const tracks = await enrichTracksWithAccuratePosters(filterTracks(json?.data?.songs || []), 20)
     viewTracks = tracks; buildPlaylistUI(false)
   } catch (_) { showToast('Could not load album', 'error') }
 }
@@ -1466,7 +1696,7 @@ async function fetchArtistDetail(id, name) {
   playlistList.innerHTML = renderTrackListSkeleton()
   try {
     const json = await lucaFetch(`/api/artists/${id}/top-songs`)
-    const tracks = filterTracks(json?.data || [])
+    const tracks = await enrichTracksWithAccuratePosters(filterTracks(json?.data || []), 20)
     viewTracks = tracks; buildPlaylistUI(false)
   } catch (_) { showToast('Could not load artist', 'error') }
 }
@@ -1526,7 +1756,7 @@ async function fetchSongs(query, isHome = false, title = '', type = 'songs', pag
     const results = extractResults(json)
     if (results.length) {
       if (type === 'songs') {
-        const tracks = filterTracks(results)
+        const tracks = await enrichTracksWithAccuratePosters(filterTracks(results), 18)
         if (tracks.length) {
           viewTracks.push(...tracks)
           finishRender(page, isHome, '', 'songs')
@@ -1660,7 +1890,7 @@ async function fetchSuggestions(trackId) {
     if (_suggestionAbortId !== myId) return   // stale — user skipped track
     const results = extractResults(json)
     if (results.length) {
-      const suggestedTracks = filterTracks(results)
+      const suggestedTracks = await enrichTracksWithAccuratePosters(filterTracks(results), 12)
       suggestedTracks.forEach(st => {
         if (!playQueue.find(q => q.id === st.id)) playQueue.push(st)
       })
@@ -2109,6 +2339,7 @@ function attachEvents() {
     showView('profile')
   })
   userProfileBtn.addEventListener('click', () => { setActiveNav('profileBtn'); showView('profile') })
+  document.getElementById('mobileSyncBtn')?.addEventListener('click', openSyncModal)
 
   // FIX: replaced prompt() with custom modal
   newPlaylistBtn.addEventListener('click', () => {
