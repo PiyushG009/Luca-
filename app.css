@@ -426,6 +426,13 @@ body::after{
   box-shadow:0 18px 44px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,.25);
 }
 .user-profile:hover{transform:scale(1.08);box-shadow:0 0 24px var(--a1-glow)}
+.user-profile.has-avatar{
+  color: transparent !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  border: 1px solid rgba(255,255,255,0.16) !important;
+}
 
 .mobile-sync-btn{
   display:none;
@@ -5454,25 +5461,28 @@ body {
 
   #mobileSyncBtn,
   .mobile-sync-btn {
+    all: unset !important;
+    box-sizing: border-box !important;
     position: absolute !important;
-    top: 18px !important;
-    right: 70px !important;
-    display: inline-flex !important;
+    top: 15px !important;
+    right: 66px !important;
+    display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 40px !important;
-    height: 40px !important;
-    min-width: 40px !important;
-    border-radius: 14px !important;
-    padding: 0 !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    border-radius: 50% !important;
     font-size: 10px !important;
     font-weight: 900 !important;
-    letter-spacing: 0.12em !important;
+    letter-spacing: 0.08em !important;
+    line-height: 1 !important;
     color: #f8fbff !important;
-    background: linear-gradient(180deg, rgba(var(--vibe-rgb), 0.28), rgba(255,255,255,0.08)) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    box-shadow: 0 14px 26px rgba(0,0,0,0.26) !important;
-    z-index: 4 !important;
+    background: linear-gradient(180deg, rgba(var(--vibe-rgb), 0.34), rgba(255,255,255,0.08)) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    box-shadow: 0 12px 24px rgba(0,0,0,0.24) !important;
+    z-index: 6 !important;
+    cursor: pointer !important;
   }
 
   .user-profile {
@@ -5480,6 +5490,10 @@ body {
     top: 14px !important;
     right: 16px !important;
     z-index: 4 !important;
+  }
+
+  .user-profile.has-avatar {
+    box-shadow: 0 16px 30px rgba(0,0,0,0.32), 0 0 20px rgba(var(--vibe-rgb), 0.12) !important;
   }
 
   #playerBar,

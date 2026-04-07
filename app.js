@@ -591,8 +591,32 @@ function updateUserUI() {
              || localStorage.getItem('luca_guest_name')
              || 'Guest'
   const init = name.charAt(0).toUpperCase()
-  userProfileBtn.textContent = init
-  suAvatar.textContent       = init
+  const avatar = currentUser?.user_metadata?.avatar_url
+              || currentUser?.user_metadata?.picture
+              || currentUser?.user_metadata?.avatar
+              || currentUser?.identities?.[0]?.identity_data?.avatar_url
+              || currentUser?.identities?.[0]?.identity_data?.picture
+              || (!currentUser ? localStorage.getItem('luca_guest_avatar') : null)
+              || ''
+  if (avatar) {
+    userProfileBtn.textContent = ''
+    userProfileBtn.style.backgroundImage = `url('${avatar}')`
+    userProfileBtn.style.backgroundSize = 'cover'
+    userProfileBtn.style.backgroundPosition = 'center'
+    userProfileBtn.classList.add('has-avatar')
+    suAvatar.textContent = ''
+    suAvatar.style.backgroundImage = `url('${avatar}')`
+    suAvatar.style.backgroundSize = 'cover'
+    suAvatar.style.backgroundPosition = 'center'
+    suAvatar.classList.add('has-avatar')
+  } else {
+    userProfileBtn.textContent = init
+    userProfileBtn.style.backgroundImage = ''
+    userProfileBtn.classList.remove('has-avatar')
+    suAvatar.textContent = init
+    suAvatar.style.backgroundImage = ''
+    suAvatar.classList.remove('has-avatar')
+  }
   suName.textContent         = name
   suAction.textContent       = currentUser ? 'View Profile' : 'Sign in for more ↗'
   renderGreeting()
@@ -2001,6 +2025,10 @@ async function renderProfileView() {
   const init  = name.charAt(0).toUpperCase()
 
   const savedAvatar = currentUser?.user_metadata?.avatar_url
+    || currentUser?.user_metadata?.picture
+    || currentUser?.user_metadata?.avatar
+    || currentUser?.identities?.[0]?.identity_data?.avatar_url
+    || currentUser?.identities?.[0]?.identity_data?.picture
     || (!currentUser ? localStorage.getItem('luca_guest_avatar') : null)
   const avatarEl = document.getElementById('profileAvatarBig')
   if (savedAvatar) {
