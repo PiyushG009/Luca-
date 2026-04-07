@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
 const distDir = path.join(rootDir, 'dist')
-const allowedExtensions = new Set(['.html', '.css', '.js'])
+const allowedExtensions = new Set(['.html', '.css', '.js', '.json', '.webmanifest', '.png'])
 const excludedFiles = new Set(['package.json', 'package-lock.json'])
 
 async function build() {

@@ -3,9 +3,16 @@
 
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0d1119" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="LucaVerse" />
   <title>LucaVerse — Music Streamer</title>
-  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="Lucaverse.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="app.css" />
 </head>
 
@@ -89,6 +96,7 @@
   </div>
 
   <div id="queuePanel" class="queue-panel">
+    <div class="sheet-grabber" aria-hidden="true"></div>
     <div class="queue-header">
       <span>Up Next</span>
       <button onclick="toggleQueue()" class="queue-close">✕</button>
@@ -99,6 +107,7 @@
 
   <!-- ── LYRICS PANEL ──────────────────────── -->
   <div id="lyricsPanel" class="lyrics-panel">
+    <div class="sheet-grabber" aria-hidden="true"></div>
     <div class="lyrics-panel-header">
       <div class="lyrics-track-info">
         <div class="lyrics-song-title" id="lyricsSongTitle">—</div>
@@ -135,6 +144,8 @@
     <div class="np-bg-blur" id="npBgBlur"></div>
     <div class="np-bg-grain"></div>
     <div class="np-bg-vignette"></div>
+    <div class="np-light-trail trail-a"></div>
+    <div class="np-light-trail trail-b"></div>
 
     <button class="np-close-btn" id="npCloseBtn" onclick="closeNowPlaying()" title="Minimize">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -156,7 +167,12 @@
         </div>
 
         <div class="np-art-outer">
+          <div class="np-stage-orbit orbit-a"></div>
+          <div class="np-stage-orbit orbit-b"></div>
+          <div class="np-stage-badge badge-live">Spatial Stage</div>
+          <div class="np-stage-badge badge-hires">Lossless Flow</div>
           <div class="np-art-wrapper">
+            <div class="np-art-reflection"></div>
             <img id="npCoverImg" class="np-cover-art" src="https://picsum.photos/500" alt="Album Art" loading="lazy" />
           </div>
         </div>
@@ -165,6 +181,15 @@
           <div class="np-song-info">
             <div class="np-song-title" id="npSongTitle">Track Title</div>
             <div class="np-song-artist" id="npSongArtist">Artist</div>
+            <div class="np-mobile-meta-strip">
+              <span class="np-mobile-chip">320kbps</span>
+              <span class="np-mobile-chip" id="npQueueCountChip">Queue 0</span>
+              <span class="np-mobile-chip" id="npLyricsStatusChip">Lyrics</span>
+            </div>
+            <div class="np-cinema-strip">
+              <span class="np-cinema-pill">Dolby-inspired depth</span>
+              <span class="np-cinema-pill">Swipe for immersive mode</span>
+            </div>
           </div>
           <button class="np-like-btn" id="npLikeBtn" onclick="npToggleLike()" title="Like">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -353,6 +378,7 @@
 
         <div class="top-bar-actions">
           <span id="homeGreeting" class="home-greeting"></span>
+          <button id="installAppBtn" class="install-app-btn" title="Install LucaVerse">Install</button>
           <button id="queueToggleBtn" class="queue-btn" title="Queue">≡</button>
         </div>
       </header>
@@ -509,14 +535,40 @@
               <h3>App Theme</h3>
               <p style="font-size:13px;color:var(--muted2);margin-bottom:14px;">Select global interface aesthetic</p>
               <div class="theme-options">
-                <button class="theme-btn active" id="theme_luca"    onclick="setThemeSettings('luca')">
-                  <div class="t-circle luca-theme"></div> Luca Blue
+                <button class="theme-btn active" id="theme_luca" onclick="setThemeSettings('luca')">
+                  <div class="t-circle luca-theme"></div>
+                  <div class="theme-copy">
+                    <strong>Deep Space</strong>
+                    <span>Cold neon chrome with premium nightclub depth</span>
+                  </div>
                 </button>
-                <button class="theme-btn" id="theme_spotify" onclick="setThemeSettings('spotify')">
-                  <div class="t-circle spotify-theme"></div> Dark Mode
+                <button class="theme-btn" id="theme_obsidian" onclick="setThemeSettings('obsidian')">
+                  <div class="t-circle obsidian-theme"></div>
+                  <div class="theme-copy">
+                    <strong>Noir Chrome</strong>
+                    <span>Industrial graphite with polished steel highlights</span>
+                  </div>
                 </button>
-                <button class="theme-btn" id="theme_glass"   onclick="setThemeSettings('glass')">
-                  <div class="t-circle glass-theme"></div> Glassmorphism
+                <button class="theme-btn" id="theme_aurora" onclick="setThemeSettings('aurora')">
+                  <div class="t-circle aurora-theme"></div>
+                  <div class="theme-copy">
+                    <strong>Acid Grid</strong>
+                    <span>Toxic green energy with hacker-club aggression</span>
+                  </div>
+                </button>
+                <button class="theme-btn" id="theme_velvet" onclick="setThemeSettings('velvet')">
+                  <div class="t-circle velvet-theme"></div>
+                  <div class="theme-copy">
+                    <strong>Velvet Rouge</strong>
+                    <span>Dark editorial crimson with seductive glow</span>
+                  </div>
+                </button>
+                <button class="theme-btn" id="theme_sunset" onclick="setThemeSettings('sunset')">
+                  <div class="t-circle sunset-theme"></div>
+                  <div class="theme-copy">
+                    <strong>Solar Storm</strong>
+                    <span>Molten amber light with after-dark heat</span>
+                  </div>
                 </button>
               </div>
             </div>
@@ -591,6 +643,112 @@
     </main>
   </div>
 
+  <div class="mobile-onboarding" id="mobileOnboarding">
+    <div class="mobile-onboarding-card">
+      <div class="mobile-onboarding-progress">
+        <span class="mobile-onboarding-dot active"></span>
+        <span class="mobile-onboarding-dot"></span>
+        <span class="mobile-onboarding-dot"></span>
+      </div>
+      <div class="mobile-onboarding-slide active" data-step="0">
+        <span class="mobile-onboarding-kicker">Welcome to LucaVerse</span>
+        <div class="mobile-onboarding-art onboarding-art-stream">
+          <svg class="onboarding-illustration onboarding-stream-illustration" viewBox="0 0 240 124" aria-hidden="true">
+            <defs>
+              <linearGradient id="streamGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="rgba(0,242,254,0.95)"/>
+                <stop offset="100%" stop-color="rgba(139,92,246,0.95)"/>
+              </linearGradient>
+            </defs>
+            <rect x="12" y="18" width="86" height="88" rx="24" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)"/>
+            <circle cx="55" cy="62" r="30" fill="url(#streamGlow)" opacity="0.9"/>
+            <circle cx="55" cy="62" r="12" fill="#081019"/>
+            <path d="M140 34C176 26 197 44 214 58" stroke="url(#streamGlow)" stroke-width="6" stroke-linecap="round" fill="none"/>
+            <path d="M136 56C166 49 192 62 216 82" stroke="rgba(255,255,255,0.22)" stroke-width="4" stroke-linecap="round" fill="none"/>
+            <rect x="138" y="72" width="64" height="12" rx="6" fill="rgba(255,255,255,0.12)"/>
+            <rect x="138" y="90" width="42" height="10" rx="5" fill="rgba(255,255,255,0.08)"/>
+          </svg>
+          <div class="onboarding-vinyl"></div>
+          <div class="onboarding-spark"></div>
+          <div class="onboarding-spark spark-two"></div>
+        </div>
+        <h2>Streaming that feels polished the second you open it.</h2>
+        <p>Clean discovery, bold visuals, and a compact player designed for one-handed mobile listening.</p>
+      </div>
+      <div class="mobile-onboarding-slide" data-step="1">
+        <span class="mobile-onboarding-kicker">Pro Mobile Flow</span>
+        <div class="mobile-onboarding-art onboarding-art-gestures">
+          <svg class="onboarding-illustration onboarding-gesture-illustration" viewBox="0 0 240 124" aria-hidden="true">
+            <defs>
+              <linearGradient id="gestureGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#6ee7ff"/>
+                <stop offset="100%" stop-color="#a78bfa"/>
+              </linearGradient>
+            </defs>
+            <rect x="80" y="16" width="80" height="94" rx="24" fill="rgba(10,14,22,0.94)" stroke="rgba(255,255,255,0.1)"/>
+            <rect x="97" y="34" width="46" height="46" rx="16" fill="url(#gestureGlow)" opacity="0.86"/>
+            <path d="M38 60H84" stroke="url(#gestureGlow)" stroke-width="5" stroke-linecap="round"/>
+            <path d="M156 60H202" stroke="url(#gestureGlow)" stroke-width="5" stroke-linecap="round"/>
+            <path d="M58 44L38 60L58 76" stroke="rgba(255,255,255,0.46)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <path d="M182 44L202 60L182 76" stroke="rgba(255,255,255,0.46)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+          <div class="gesture-phone"></div>
+          <div class="gesture-swipe gesture-left"></div>
+          <div class="gesture-swipe gesture-right"></div>
+        </div>
+        <h2>Swipe up for fullscreen. Swipe the cover to skip tracks.</h2>
+        <p>Queue, synced lyrics, and premium playback controls now live inside a tighter mobile-first experience.</p>
+      </div>
+      <div class="mobile-onboarding-slide" data-step="2">
+        <span class="mobile-onboarding-kicker">Install It</span>
+        <div class="mobile-onboarding-art onboarding-art-install">
+          <svg class="onboarding-illustration onboarding-install-illustration" viewBox="0 0 240 124" aria-hidden="true">
+            <defs>
+              <linearGradient id="installGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#2dd4bf"/>
+                <stop offset="100%" stop-color="#e9d5ff"/>
+              </linearGradient>
+            </defs>
+            <rect x="70" y="18" width="100" height="88" rx="28" fill="rgba(9,12,18,0.9)" stroke="rgba(255,255,255,0.09)"/>
+            <circle cx="120" cy="54" r="24" fill="url(#installGlow)" opacity="0.92"/>
+            <path d="M120 38V70" stroke="#081019" stroke-width="5" stroke-linecap="round"/>
+            <path d="M106 58L120 72L134 58" stroke="#081019" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <rect x="88" y="84" width="64" height="10" rx="5" fill="rgba(255,255,255,0.12)"/>
+          </svg>
+          <div class="install-card-glow"></div>
+          <div class="install-card-shell">
+            <span class="install-card-badge">APP</span>
+          </div>
+        </div>
+        <h2>Add LucaVerse to your home screen for the app vibe.</h2>
+        <p>Install once and jump back into your music faster, with a cleaner standalone experience on your phone.</p>
+      </div>
+      <div class="mobile-onboarding-actions">
+        <button class="mobile-onboarding-skip" id="mobileOnboardingSkip">Skip</button>
+        <button class="mobile-onboarding-next" id="mobileOnboardingNext">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mobile-dock" id="mobileDock" aria-label="Mobile Navigation">
+    <button class="mobile-dock-btn active" id="mobileHomeBtn" data-nav="homeBtn" title="Home">
+      <span class="mobile-dock-icon">🏠</span>
+      <span class="mobile-dock-label">Home</span>
+    </button>
+    <button class="mobile-dock-btn" id="mobileSearchBtn" data-nav="searchBtn" title="Search">
+      <span class="mobile-dock-icon">🔍</span>
+      <span class="mobile-dock-label">Search</span>
+    </button>
+    <button class="mobile-dock-btn mobile-dock-btn-accent" id="mobileLikedBtn" data-nav="likedSongsBtn" title="Liked Songs">
+      <span class="mobile-dock-icon">❤️</span>
+      <span class="mobile-dock-label">Liked</span>
+    </button>
+    <button class="mobile-dock-btn" id="mobileProfileBtn" data-nav="profileBtn" title="Profile">
+      <span class="mobile-dock-icon">👤</span>
+      <span class="mobile-dock-label">Profile</span>
+    </button>
+  </div>
+
   <!-- ── PLAYER BAR ─────────────────────── -->
   <footer class="player-bar" id="playerBar">
     <div class="now-playing-info" id="nowPlayingClickable" title="Expand Player">
@@ -639,6 +797,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="pwa.js"></script>
   <script src="app.js"></script>
   <script src="nowplaying.js"></script>
 

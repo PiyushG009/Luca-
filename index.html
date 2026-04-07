@@ -2,273 +2,541 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LucaVerse — Music Streamer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d1119" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="LucaVerse" />
+  <title>LucaVerse - Music Streamer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&f[]=satoshi@400,500,700&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="Lucaverse.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="landing.css" />
-  <style>
-    .nav-logo .logo-script { font-family: 'Dancing Script', cursive; font-size: 26px; color: #fff; letter-spacing: -0.5px; }
-    .nav-logo .logo-script span { color: #00e5cc; }
-    .nav-logo .logo-sub { font-family: 'Outfit', sans-serif; font-size: 9px; letter-spacing: 3px; color: #00e5cc; text-transform: uppercase; display: block; margin-top: -4px; padding-left: 2px; }
-    .hero-title { font-family: 'Outfit', sans-serif; font-weight: 700; }
-    .footer-logo-script { font-family: 'Dancing Script', cursive; font-size: 32px; color: #fff; }
-    .footer-logo-script span { color: #00e5cc; }
-  </style>
 </head>
 <body>
+  <div class="site-noise"></div>
+  <div class="page-ambient ambient-left"></div>
+  <div class="page-ambient ambient-right"></div>
 
-  <!-- ── NAV ─────────────────────────────────── -->
   <nav class="nav" id="nav">
     <a href="index.html" class="nav-logo">
       <span class="logo-script">Luca<span>Verse</span></span>
-      <span class="logo-sub">— Music Streamer —</span>
+      <span class="logo-sub">MUSIC STREAMER</span>
     </a>
     <div class="nav-links">
+      <a href="#experience" class="nav-link">Experience</a>
+      <a href="#features" class="nav-link">Features</a>
       <a href="auth.html" class="nav-ghost">Sign in</a>
-      <a href="app.html" class="nav-cta">Try free ↗</a>
+      <a href="app.html" class="nav-cta">Try free</a>
     </div>
   </nav>
 
-  <!-- ── HERO ─────────────────────────────────── -->
-  <section class="hero">
-    <!-- Premium Mesh Gradient Background -->
-    <div class="mesh-bg"></div>
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
+  <main>
+    <section class="hero" id="top">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <div class="hero-chip fade-item">
+            <span class="chip-pulse"></span>
+            320kbps premium sound. Zero ads. Zero limits.
+          </div>
 
-    <!-- Left: Content -->
-    <div class="hero-content">
-      <div class="hero-badge">
-        <span class="badge-dot"></span>
-        Free · 320kbps · No Ads
-      </div>
-      <h1 class="hero-title">
-        Your music.<br />
-        Your <em>universe.</em>
-      </h1>
-      <p class="hero-sub">
-        Stream millions of songs instantly — no payment needed.<br />
-        Sign in to unlock playlists, liked songs, and sync across devices.
-      </p>
-      <div class="hero-ctas">
-        <a href="app.html" class="btn-primary">
-          <span>Start Listening Free</span>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a>
-        <a href="auth.html" class="btn-secondary">Sign in →</a>
-      </div>
-      <p class="hero-fine">No credit card. No subscription. Just music.</p>
+          <div class="hero-eyebrow fade-item">
+            <span class="eyebrow-line"></span>
+            <span>Animated streaming for nights that deserve more than a static homepage</span>
+          </div>
 
-      <!-- Unique Audio Visualizer -->
-      <div class="hero-visualizer">
-        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-      </div>
-    </div>
+          <h1 class="hero-title fade-item">
+            Turn every <span>late-night scroll</span><br />
+            into a full-on<br />
+            <em>listening universe.</em>
+          </h1>
 
-    <!-- Right: LucaVerse Brand Centerpiece -->
-    <div class="hero-logo-container">
-      <img src="Lucaverse.png" alt="LucaVerse Logo" class="hero-main-logo" />
-      <div class="logo-glow"></div>
-    </div>
-  </section>
+          <p class="hero-sub fade-item">
+            LucaVerse brings cinematic music discovery, ultra-clean playback,
+            synced lyrics, playlists, and together-listening into one deeply
+            immersive streaming home.
+          </p>
 
-  <!-- ── INFINITE MARQUEE ─────────────────────── -->
-  <div class="marquee-container">
-    <div class="marquee-content">
-      <span>✦ UNLIMITED STREAMING</span>
-      <span>✦ NO ADS EVER</span>
-      <span>✦ 320KBPS HD AUDIO</span>
-      <span>✦ SYNC ACROSS DEVICES</span>
-      <span>✦ 50 MILLION+ TRACKS</span>
-      <span>✦ UNLIMITED STREAMING</span>
-      <span>✦ NO ADS EVER</span>
-      <span>✦ 320KBPS HD AUDIO</span>
-      <span>✦ SYNC ACROSS DEVICES</span>
-      <span>✦ 50 MILLION+ TRACKS</span>
-    </div>
-  </div>
+          <div class="hero-actions fade-item">
+            <a href="app.html" class="btn-primary">
+              Start Listening Free
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14"></path>
+                <path d="M13 5l7 7-7 7"></path>
+              </svg>
+            </a>
+            <a href="auth.html" class="btn-secondary">Create your library</a>
+          </div>
 
-  <!-- ── STATS ─────────────────────────────────── -->
-  <section class="stats">
-    <div class="stat-item">
-      <span class="stat-num">50M+</span>
-      <span class="stat-label">Songs</span>
-    </div>
-    <div class="stat-divider"></div>
-    <div class="stat-item">
-      <span class="stat-num">320</span>
-      <span class="stat-label">kbps quality</span>
-    </div>
-    <div class="stat-divider"></div>
-    <div class="stat-item">
-      <span class="stat-num">₹0</span>
-      <span class="stat-label">Forever free</span>
-    </div>
-    <div class="stat-divider"></div>
-    <div class="stat-item">
-      <span class="stat-num">∞</span>
-      <span class="stat-label">Playlists</span>
-    </div>
-  </section>
+          <div class="hero-meta fade-item">
+            <div class="hero-proof">
+              <strong>50M+</strong>
+              <span>tracks across moods, languages, and eras</span>
+            </div>
+            <div class="hero-proof">
+              <strong>Live</strong>
+              <span>lyrics, vibe backgrounds, queue, EQ, and rooms</span>
+            </div>
+          </div>
 
-  <!-- ── FEATURES ─────────────────────────────── -->
-  <section class="features" id="features">
-    <div class="features-label">Why LucaVerse</div>
-    <h2 class="features-title">Everything you need.<br /><em>Nothing you don't.</em></h2>
+          <div class="hero-pills fade-item">
+            <span>Dynamic gradients</span>
+            <span>Endless discovery</span>
+            <span>Room-ready playback</span>
+            <span>Luxury glass UI</span>
+          </div>
+        </div>
 
-    <div class="features-grid">
-      <div class="feat-card feat-large">
-        <div class="feat-icon">🎵</div>
-        <h3>Always Free</h3>
-        <p>Stream any song, anytime, at no cost. No trial periods, no paywalls — just music the way it should be.</p>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon">🎧</div>
-        <h3>HD Quality</h3>
-        <p>Crystal clear 320kbps audio. Hear every detail the artist intended.</p>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon">❤️</div>
-        <h3>Your Library</h3>
-        <p>Like songs, build playlists. Sign in and your library syncs everywhere.</p>
-      </div>
-      <div class="feat-card feat-large feat-dark">
-        <div class="feat-icon">📱</div>
-        <h3>Works everywhere</h3>
-        <p>Desktop, mobile, tablet. LucaVerse is optimized for every screen — even works as a PWA you can install.</p>
-        <div class="feat-devices">
-          <div class="device-pill">Desktop</div>
-          <div class="device-pill">Mobile</div>
-          <div class="device-pill">Tablet</div>
+        <div class="hero-stage fade-item" id="heroStage">
+          <div class="stage-glow stage-glow-a"></div>
+          <div class="stage-glow stage-glow-b"></div>
+          <div class="stage-grid"></div>
+          <div class="spotlight"></div>
+          <div class="hero-rings">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+
+          <div class="vinyl-shell">
+            <div class="vinyl-ring ring-outer"></div>
+            <div class="vinyl-ring ring-mid"></div>
+            <div class="vinyl-core">
+              <img src="Lucaverse.png" alt="LucaVerse" class="stage-logo" />
+            </div>
+          </div>
+
+          <article class="floating-player card-depth card-main">
+            <div class="floating-topline">
+              <span>Now playing</span>
+              <span class="tiny-dot"></span>
+              <span>LucaVerse Engine</span>
+            </div>
+            <div class="floating-track">
+              <div class="album-stack">
+                <img src="Lucaverse.png" alt="cover" class="album-cover" />
+              </div>
+              <div class="track-copy">
+                <h3>Midnight Drive Mode</h3>
+                <p>Adaptive visuals. Synced lyrics. Spatial motion.</p>
+              </div>
+            </div>
+            <div class="floating-progress">
+              <span>0:41</span>
+              <div class="progress-bar"><div class="progress-fill"></div></div>
+              <span>4:12</span>
+            </div>
+            <div class="floating-controls">
+              <button class="control-pill">Shuffle</button>
+              <button class="control-main">Play</button>
+              <button class="control-pill">Lyrics</button>
+            </div>
+          </article>
+
+          <article class="glass-note card-depth card-mini card-recommend">
+            <span class="note-label">Recommended for tonight</span>
+            <h4>Lo-fi rain, desi pop, synthwave drives</h4>
+            <p>Smart rows that feel alive instead of static.</p>
+          </article>
+
+          <article class="glass-note card-depth card-mini card-sync">
+            <span class="note-label">Listen together</span>
+            <h4>Create rooms, invite friends, stay in sync.</h4>
+          </article>
+
+          <article class="hero-stat card-depth card-stat">
+            <span class="note-label">Session energy</span>
+            <strong>98%</strong>
+            <p>Scrolling feels active, layered, and premium from first paint.</p>
+          </article>
+
+          <div class="orbit-tag orbit-a">Lyrics Sync</div>
+          <div class="orbit-tag orbit-b">Glass UI</div>
+          <div class="orbit-tag orbit-c">Live Discovery</div>
+
+          <div class="equalizer-cluster">
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ── HOW IT WORKS ────────────────────────── -->
-  <section class="how">
-    <h2 class="how-title">Up and running <em>in seconds.</em></h2>
-    <div class="how-steps">
-      <div class="how-step">
-        <div class="step-num">01</div>
-        <h3>Open LucaVerse</h3>
-        <p>No install, no download. Open in any browser and start playing instantly.</p>
+    <section class="ticker-wrap">
+      <div class="ticker">
+        <div class="ticker-track">
+          <span>Unlimited streaming</span>
+          <span>Animated discovery</span>
+          <span>Live lyrics sync</span>
+          <span>Listen together rooms</span>
+          <span>Smart recommendations</span>
+          <span>320kbps playback</span>
+          <span>Unlimited streaming</span>
+          <span>Animated discovery</span>
+          <span>Live lyrics sync</span>
+          <span>Listen together rooms</span>
+          <span>Smart recommendations</span>
+          <span>320kbps playback</span>
+        </div>
       </div>
-      <div class="how-arrow">→</div>
-      <div class="how-step">
-        <div class="step-num">02</div>
-        <h3>Search anything</h3>
-        <p>Hindi, Punjabi, English, Lo-Fi. Find any song from 50M+ tracks.</p>
-      </div>
-      <div class="how-arrow">→</div>
-      <div class="how-step">
-        <div class="step-num">03</div>
-        <h3>Sign in (optional)</h3>
-        <p>Create a free account to save liked songs, build playlists, and sync your library.</p>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ── FINAL CTA ─────────────────────────────── -->
-  <section class="final-cta">
-    <div class="cta-glow"></div>
-    <h2 class="cta-title">Ready to listen?</h2>
-    <p class="cta-sub">Join thousands already streaming on LucaVerse.</p>
-    <div class="cta-btns">
-      <a href="app.html" class="btn-primary btn-large">Play now, free</a>
-      <a href="auth.html" class="btn-outline-cta">Create account</a>
-    </div>
-  </section>
+    <section class="immersive-band section-shell">
+      <div class="immersive-shell reveal">
+        <div class="immersive-copy">
+          <span class="section-kicker">Immersive Layering</span>
+          <h2>Luxury motion, crisp hierarchy, and depth that keeps the page feeling alive.</h2>
+          <p>
+            This extra polish layer adds richer surface detail, premium stat blocks,
+            controlled glow treatment, and UI modules that feel like a real product trailer.
+          </p>
+        </div>
+        <div class="immersive-metrics">
+          <div class="metric-card">
+            <strong>01</strong>
+            <span>Hero depth stack</span>
+          </div>
+          <div class="metric-card">
+            <strong>02</strong>
+            <span>Smoother scroll reveals</span>
+          </div>
+          <div class="metric-card">
+            <strong>03</strong>
+            <span>Premium CTA emphasis</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
-  <!-- ── FOOTER ─────────────────────────────────── -->
+    <section class="showcase section-shell" id="experience">
+      <div class="section-head reveal">
+        <span class="section-kicker">Experience</span>
+        <h2>Built like a premium music product, not just another player.</h2>
+        <p>Every block is designed to feel animated, tactile, and high-end from the first scroll.</p>
+      </div>
+
+      <div class="showcase-grid">
+        <div class="showcase-panel reveal panel-large">
+          <div class="panel-screen">
+            <div class="screen-nav">
+              <span>For you</span>
+              <span>Moods</span>
+              <span>Listen together</span>
+            </div>
+            <div class="screen-hero">
+              <div>
+                <h3>Motion-first discovery</h3>
+                <p>Rows, artist moments, gradients, ambient glows, and polished transitions everywhere.</p>
+              </div>
+              <div class="screen-badge">No dead space</div>
+            </div>
+            <div class="screen-cards">
+              <article class="screen-card active-card">
+                <div class="screen-art art-one"></div>
+                <div class="screen-copy">
+                  <strong>Night Drives</strong>
+                  <span>Moody synths</span>
+                </div>
+              </article>
+              <article class="screen-card">
+                <div class="screen-art art-two"></div>
+                <div class="screen-copy">
+                  <strong>Desi Heat</strong>
+                  <span>Viral bangers</span>
+                </div>
+              </article>
+              <article class="screen-card">
+                <div class="screen-art art-three"></div>
+                <div class="screen-copy">
+                  <strong>Lo-Fi Rain</strong>
+                  <span>Late-night focus</span>
+                </div>
+              </article>
+              <article class="screen-card">
+                <div class="screen-art art-four"></div>
+                <div class="screen-copy">
+                  <strong>After Hours</strong>
+                  <span>Luxury pop cuts</span>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+
+        <div class="showcase-stack">
+          <div class="showcase-panel reveal panel-small">
+            <span class="mini-kicker">Adaptive vibe</span>
+            <h3>Backgrounds react to what's playing.</h3>
+            <p>Dominant colors, radial glows, blur layers, and noise textures create depth.</p>
+          </div>
+          <div class="showcase-panel reveal panel-small">
+            <span class="mini-kicker">Clean utility</span>
+            <h3>Premium controls without clutter.</h3>
+            <p>Volume, queue, rooms, lyrics, and EQ are surfaced with smarter interaction design.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="moodboard section-shell">
+      <div class="section-head reveal">
+        <span class="section-kicker">Visual Energy</span>
+        <h2>Every block should feel collectible, not disposable.</h2>
+        <p>So the page balances drama, motion, and product clarity instead of looking like a plain startup template.</p>
+      </div>
+
+      <div class="moodboard-grid">
+        <article class="mood-card reveal mood-feature">
+          <div class="mood-gradient"></div>
+          <div class="mood-copy">
+            <span class="mini-kicker">Cinematic hero</span>
+            <h3>Oversized type, floating layers, and branded motion cues.</h3>
+            <p>Big enough to feel memorable, clean enough to stay premium.</p>
+          </div>
+        </article>
+        <article class="mood-card reveal">
+          <span class="mini-kicker">Premium surfaces</span>
+          <h3>Glass cards with controlled glow.</h3>
+          <p>Not flashy for the sake of it, but rich enough to feel expensive.</p>
+        </article>
+        <article class="mood-card reveal">
+          <span class="mini-kicker">Responsive aura</span>
+          <h3>Mobile keeps the atmosphere.</h3>
+          <p>Composition tightens without throwing away the mood.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="features section-shell" id="features">
+      <div class="section-head reveal">
+        <span class="section-kicker">Why LucaVerse</span>
+        <h2>Everything layered for mood, motion, and retention.</h2>
+      </div>
+
+      <div class="feature-grid">
+        <article class="feature-card reveal feature-wide">
+          <div class="feature-icon">01</div>
+          <h3>Cinematic landing to playback journey</h3>
+          <p>From first impression to full-screen player, the visual language stays rich, immersive, and unmistakably premium.</p>
+        </article>
+        <article class="feature-card reveal">
+          <div class="feature-icon">02</div>
+          <h3>Discovery that keeps moving</h3>
+          <p>Richer rows, stronger recommendations, and interfaces that never feel empty or static.</p>
+        </article>
+        <article class="feature-card reveal">
+          <div class="feature-icon">03</div>
+          <h3>Sync-ready social foundation</h3>
+          <p>Listen-together rooms, faster room entry, and UI patterns ready for deeper real-time features.</p>
+        </article>
+        <article class="feature-card reveal">
+          <div class="feature-icon">04</div>
+          <h3>High-feel audio controls</h3>
+          <p>Player, queue, EQ, toast messaging, and lyric states that feel deliberate instead of default.</p>
+        </article>
+        <article class="feature-card reveal feature-dark">
+          <div class="feature-icon">05</div>
+          <h3>Responsive without losing atmosphere</h3>
+          <p>The composition adapts on mobile, but still keeps glow, motion, hierarchy, and presence intact.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="flow section-shell">
+      <div class="section-head reveal">
+        <span class="section-kicker">Flow</span>
+        <h2>Open. Discover. Play. Stay there.</h2>
+      </div>
+
+      <div class="flow-grid">
+        <div class="flow-step reveal">
+          <span>01</span>
+          <h3>Land in a world that feels alive</h3>
+          <p>Hero motion, branded depth, floating UI, and an interface that feels expensive from second one.</p>
+        </div>
+        <div class="flow-step reveal">
+          <span>02</span>
+          <h3>Drill into rows, moods, and artists</h3>
+          <p>Scrollable discovery should feel endless and intentional, not sparse and forgotten.</p>
+        </div>
+        <div class="flow-step reveal">
+          <span>03</span>
+          <h3>Enter an immersive playback space</h3>
+          <p>Synced lyrics, polished controls, and full-screen moments that match the energy of the music.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="marquee-stack">
+      <div class="marquee-line">
+        <div class="marquee-track">
+          <span>Premium motion</span>
+          <span>Infinite rows</span>
+          <span>Synced lyrics</span>
+          <span>Listen together</span>
+          <span>Adaptive glow</span>
+          <span>Premium motion</span>
+          <span>Infinite rows</span>
+          <span>Synced lyrics</span>
+          <span>Listen together</span>
+          <span>Adaptive glow</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="final-cta section-shell">
+      <div class="cta-core reveal">
+        <span class="section-kicker">Start Free</span>
+        <h2>Give LucaVerse a landing page that feels like the product it wants to become.</h2>
+        <p>Stream free. Build your library. Share rooms. Stay in motion.</p>
+        <div class="hero-actions cta-actions">
+          <a href="app.html" class="btn-primary">
+            Launch the app
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14"></path>
+              <path d="M13 5l7 7-7 7"></path>
+            </svg>
+          </a>
+          <a href="auth.html" class="btn-secondary">Sign in and sync</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
   <footer class="footer">
-    <div class="footer-logo"><span class="footer-logo-script">Luca<span>Verse</span></span></div>
-    <p class="footer-tag">Your music. Your universe.</p>
-    <div class="footer-links">
-      <a href="#">Privacy</a>
-      <a href="#">Terms</a>
-      <a href="auth.html">Sign In</a>
-      <a href="app.html">Try Free</a>
+    <div class="footer-brand">
+      <span class="logo-script">Luca<span>Verse</span></span>
+      <span class="logo-sub">YOUR MUSIC STREAMER</span>
     </div>
-    <p class="footer-copy">© 2026 LucaVerse. Made with ♥ for music lovers.</p>
+    <div class="footer-links">
+      <a href="#top">Top</a>
+      <a href="#experience">Experience</a>
+      <a href="#features">Features</a>
+      <a href="auth.html">Sign in</a>
+      <a href="app.html">App</a>
+    </div>
+    <p class="footer-copy">© 2026 LucaVerse. Designed for people who want music to feel bigger.</p>
   </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
   <script>
-    gsap.registerPlugin(ScrollTrigger);
+    gsap.registerPlugin(ScrollTrigger)
 
-    // Scroll: add shadow and glass to nav
+    const nav = document.getElementById('nav')
     window.addEventListener('scroll', () => {
-      document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 20)
-    });
+      nav.classList.toggle('scrolled', window.scrollY > 12)
+    })
 
-    // Hero Animations on Load
-    const tl = gsap.timeline({ defaults: { ease: "power4.out", duration: 1.2 } });
-    
-    tl.from(".hero-badge", { y: 20, opacity: 0, duration: 0.8 }, 0.2)
-      .from(".hero-title", { y: 40, opacity: 0, duration: 1 }, 0.4)
-      .from(".hero-sub", { y: 20, opacity: 0, duration: 0.8 }, 0.6)
-      .from(".hero-ctas, .hero-fine", { y: 20, opacity: 0, stagger: 0.1, duration: 0.8 }, 0.8)
-      .from(".hero-logo-container", { scale: 0.8, opacity: 0, duration: 1.5, ease: "elastic.out(1, 0.5)" }, 0.5);
+    gsap.from('.fade-item', {
+      y: 38,
+      opacity: 0,
+      duration: 1,
+      stagger: 0.12,
+      ease: 'power3.out',
+      delay: 0.15
+    })
 
-    // Continuous Float Animation for Logo
-    gsap.to(".hero-main-logo", {
-      y: 20,
-      duration: 3,
+    gsap.from('.hero-stage', {
+      opacity: 0,
+      scale: 0.92,
+      duration: 1.3,
+      ease: 'power3.out',
+      delay: 0.35
+    })
+
+    gsap.to('.vinyl-shell', {
+      rotate: 360,
+      duration: 24,
+      repeat: -1,
+      ease: 'none'
+    })
+
+    gsap.to('.card-main', {
+      y: -14,
+      duration: 2.8,
       repeat: -1,
       yoyo: true,
-      ease: "sine.inOut"
-    });
+      ease: 'sine.inOut'
+    })
 
-    // Mouse Parallax for Logo Centerpiece
-    document.addEventListener("mousemove", (e) => {
-      const xAxis = (window.innerWidth / 2 - e.pageX) / 50;
-      const yAxis = (window.innerHeight / 2 - e.pageY) / 50;
-      gsap.to(".hero-main-logo", { 
-        x: xAxis * 2, 
-        y: yAxis * 2, 
-        rotationY: xAxis * 1.5, 
-        rotationX: -yAxis * 1.5, 
-        duration: 1.2, 
-        ease: "power2.out" 
-      });
-      gsap.to(".logo-glow", { 
-        x: xAxis * 4, 
-        y: yAxis * 4, 
-        duration: 1.5, 
-        ease: "power2.out" 
-      });
-    });
+    gsap.to('.card-recommend', {
+      y: -10,
+      duration: 3.6,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut'
+    })
 
-    // Scroll Animations - Stats
-    gsap.from(".stat-item", {
-      scrollTrigger: { trigger: ".stats", start: "top 85%" },
-      y: 30, opacity: 0, stagger: 0.1, duration: 0.8, ease: "power3.out"
-    });
+    gsap.to('.card-sync', {
+      y: -12,
+      duration: 3.1,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut'
+    })
 
-    // Scroll Animations - Features
-    gsap.from(".feat-card", {
-      scrollTrigger: { trigger: ".features-grid", start: "top 80%" },
-      y: 40, opacity: 0, stagger: 0.1, duration: 1, ease: "power3.out"
-    });
+    gsap.to('.card-stat', {
+      y: -8,
+      duration: 3.3,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut'
+    })
 
-    // Scroll Animations - How it works
-    gsap.from(".how-step", {
-      scrollTrigger: { trigger: ".how-steps", start: "top 80%" },
-      y: 40, opacity: 0, stagger: 0.15, duration: 1, ease: "power3.out"
-    });
+    gsap.to('.hero-rings span', {
+      scale: 1.08,
+      opacity: 0.22,
+      duration: 3.8,
+      stagger: 0.45,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut'
+    })
 
-    // Scroll Animations - Final CTA
-    gsap.from(".final-cta > *", {
-      scrollTrigger: { trigger: ".final-cta", start: "top 75%" },
-      y: 30, opacity: 0, stagger: 0.1, duration: 1, ease: "power3.out"
-    });
+    gsap.utils.toArray('.reveal').forEach((item) => {
+      gsap.from(item, {
+        y: 48,
+        opacity: 0,
+        duration: 1,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: item,
+          start: 'top 82%'
+        }
+      })
+    })
+
+    gsap.to('.spotlight', {
+      x: 34,
+      y: -22,
+      duration: 5.2,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut'
+    })
+
+    gsap.to('.screen-card', {
+      y: -12,
+      duration: 2.6,
+      repeat: -1,
+      yoyo: true,
+      stagger: 0.18,
+      ease: 'sine.inOut'
+    })
+
+    gsap.utils.toArray('.mood-card, .feature-card, .flow-step, .showcase-panel').forEach((card, index) => {
+      gsap.to(card, {
+        y: -8,
+        duration: 3.2 + index * 0.08,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut'
+      })
+    })
   </script>
+  <script src="pwa.js"></script>
 </body>
 </html>

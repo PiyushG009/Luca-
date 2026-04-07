@@ -36,6 +36,7 @@ function closeNowPlaying() {
     pBar.classList.remove('hidden')
   }
   document.body.classList.remove('np-active-fullscreen')
+  document.body.classList.remove('np-lyrics-open')
 }
 
 // ── Sync NP UI with current track ───────────────────────
@@ -227,6 +228,7 @@ function toggleNpLyrics() {
   npLyricsOpen = !npLyricsOpen
   lyrPanel.classList.toggle('np-lyrics-visible', npLyricsOpen)
   if (npOverlay) npOverlay.classList.toggle('lyrics-active', npLyricsOpen)
+  document.body.classList.toggle('np-lyrics-open', npLyricsOpen)
 
   const btn = document.getElementById('npLyricsBtn')
   if (btn) btn.classList.toggle('np-action-active', npLyricsOpen)
@@ -246,8 +248,11 @@ function toggleNpLyrics() {
 
 function closeNpLyrics() {
   const lyrPanel = document.getElementById('npLyricsPanel')
+  const npOverlay = document.getElementById('nowPlayingOverlay')
   if (lyrPanel) lyrPanel.classList.remove('np-lyrics-visible')
+  if (npOverlay) npOverlay.classList.remove('lyrics-active')
   npLyricsOpen = false
+  document.body.classList.remove('np-lyrics-open')
   stopLyricsRaf()
   const btn = document.getElementById('npLyricsBtn')
   if (btn) btn.classList.remove('np-action-active')
@@ -513,6 +518,40 @@ function initNowPlayingOverlay() {
     overlay.addEventListener('touchstart', e => { sy = e.touches[0].clientY }, { passive: true })
     overlay.addEventListener('touchend',   e => { if (e.changedTouches[0].clientY - sy > 90) closeNowPlaying() }, { passive: true })
   }
+
+  const playerBar = document.getElementById('playerBar')
+  if (playerBar) {
+    let barStartY = 0
+    playerBar.addEventListener('touchstart', e => {
+      barStartY = e.touches[0].clientY
+    }, { passive: true })
+    playerBar.addEventListener('touchend', e => {
+      if (barStartY - e.changedTouches[0].clientY > 40) {
+        const title = document.getElementById('trackTitle')?.textContent
+        if (title && title !== 'Track Title') openNowPlaying()
+      }
+    }, { passive: true })
+  }
+
+  const artWrapper = document.querySelector('.np-art-wrapper')
+  if (artWrapper) {
+    let startX = 0
+    let startY = 0
+    artWrapper.addEventListener('touchstart', e => {
+      startX = e.touches[0].clientX
+      startY = e.touches[0].clientY
+    }, { passive: true })
+    artWrapper.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - startX
+      const dy = Math.abs(e.changedTouches[0].clientY - startY)
+      if (Math.abs(dx) < 60 || dy > 40) return
+      if (dx < 0) {
+        document.getElementById('nextBtn')?.click()
+      } else {
+        document.getElementById('prevBtn')?.click()
+      }
+    }, { passive: true })
+  }
 }
 
 // ── BASS REACTIVE WAVEFORM ──────────────────────────────
@@ -545,4 +584,93 @@ function updateWaveform() {
 
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(initNowPlayingOverlay, 600)
+})
+
+function updateNpMobileMeta() {
+  const queueChip = document.getElementById('npQueueCountChip')
+  const lyricsChip = document.getElementById('npLyricsStatusChip')
+  const track = playQueue?.[playIndex]
+  if (queueChip) queueChip.textContent = `Queue ${Math.max(0, (playQueue?.length || 0) - 1)}`
+  if (lyricsChip) lyricsChip.textContent = track?.hasLyrics ? 'Synced Ready' : 'Lyrics Search'
+}
+
+const __baseSyncNowPlayingUI = syncNowPlayingUI
+syncNowPlayingUI = function syncNowPlayingUIEnhanced() {
+  __baseSyncNowPlayingUI()
+  updateNpMobileMeta()
+}
+
+const __baseToggleNpLyrics = toggleNpLyrics
+toggleNpLyrics = function toggleNpLyricsEnhanced() {
+  __baseToggleNpLyrics()
+  updateNpMobileMeta()
+}
+
+function initSharperPlayerGestures() {
+  const overlay = document.getElementById('nowPlayingOverlay')
+  const shell = document.querySelector('.np-inner')
+  const miniPlayer = document.getElementById('playerBar')
+  if (miniPlayer && miniPlayer.dataset.gesturesBound !== '1') {
+    miniPlayer.dataset.gesturesBound = '1'
+    let sx = 0
+    let sy = 0
+    miniPlayer.addEventListener('touchstart', (e) => {
+      if (e.target.closest('.progress-track, .controls-main, .vol-container, button, input')) {
+        sx = 0
+        sy = 0
+        return
+      }
+      sx = e.touches[0].clientX
+      sy = e.touches[0].clientY
+    }, { passive: true })
+    miniPlayer.addEventListener('touchend', (e) => {
+      if (!sx && !sy) return
+      const dx = e.changedTouches[0].clientX - sx
+      const dy = e.changedTouches[0].clientY - sy
+      if (Math.abs(dx) > 56 && Math.abs(dy) < 34) {
+        if (dx < 0) document.getElementById('nextBtn')?.click()
+        else document.getElementById('prevBtn')?.click()
+      }
+      if (dy < -34) {
+        const title = document.getElementById('trackTitle')?.textContent
+        if (title && title !== 'Track Title') openNowPlaying()
+      }
+      sx = 0
+      sy = 0
+    }, { passive: true })
+  }
+
+  if (overlay && shell && shell.dataset.gesturesBound !== '1') {
+    shell.dataset.gesturesBound = '1'
+    let startX = 0
+    let startY = 0
+    shell.addEventListener('touchstart', (e) => {
+      if (e.target.closest('.np-progress-track, .np-controls, .np-footer-row, button, input')) {
+        startX = 0
+        startY = 0
+        return
+      }
+      startX = e.touches[0].clientX
+      startY = e.touches[0].clientY
+    }, { passive: true })
+    shell.addEventListener('touchend', (e) => {
+      if (!startX && !startY) return
+      const dx = e.changedTouches[0].clientX - startX
+      const dy = e.changedTouches[0].clientY - startY
+      if (Math.abs(dx) > 54 && Math.abs(dy) < 42 && !npLyricsOpen) {
+        if (dx < 0) document.getElementById('nextBtn')?.click()
+        else document.getElementById('prevBtn')?.click()
+      }
+      if (dy > 76 && Math.abs(dx) < 44) closeNowPlaying()
+      startX = 0
+      startY = 0
+    }, { passive: true })
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    updateNpMobileMeta()
+    initSharperPlayerGestures()
+  }, 700)
 })

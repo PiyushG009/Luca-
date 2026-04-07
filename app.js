@@ -719,43 +719,137 @@ function normalizeLyricsPayload(root) {
   return null
 }
 
-async function fetchLrclibLyrics(track) {
-  const cleanTitle = (track.title || '').replace(/\(.*?\)|\[.*?\]|from.*$/i, '').trim()
-  const artistCandidates = [
-    (track.artist || '').trim(),
-    (track.artist || '').split(',')[0]?.trim(),
-    (track.artist || '').split('&')[0]?.trim(),
-  ].filter(Boolean)
-  const titleCandidates = [cleanTitle, (track.title || '').trim()].filter(Boolean)
+function decodeHtmlEntities(value) {
+  const str = typeof value === 'string' ? value : ''
+  if (!str) return ''
+  const textarea = document.createElement('textarea')
+  textarea.innerHTML = str
+  return textarea.value.replace(/\s+/g, ' ').trim()
+}
 
-  for (const title of titleCandidates) {
-    for (const artist of artistCandidates) {
+function cleanLyricsField(value) {
+  return decodeHtmlEntities(value)
+    .replace(/\s*[\(\[]?(?:official|audio|video|visualizer|lyric video|lyrics?|hd|4k|8k|viral version|slowed|reverb|remix)[\)\]]?\s*/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function buildLyricsTitleVariants(track) {
+  const raw = cleanLyricsField(track?.title || '')
+  const variants = new Set([raw])
+  ;[
+    raw.replace(/\(.*?\)|\[.*?\]/g, ' '),
+    raw.replace(/\s+-\s+.*$/g, ' '),
+    raw.replace(/\s+from\s+["'][^"']+["']/gi, ' '),
+    raw.replace(/\s+feat\.?.*$/gi, ' '),
+    raw.replace(/\s+ft\.?.*$/gi, ' '),
+    raw.replace(/\s+version.*$/gi, ' '),
+  ].forEach((value) => {
+    const cleaned = value.replace(/\s+/g, ' ').trim()
+    if (cleaned) variants.add(cleaned)
+  })
+  return [...variants].filter(Boolean)
+}
+
+function buildLyricsArtistVariants(track) {
+  const raw = cleanLyricsField(track?.artist || '')
+  const variants = new Set([raw])
+  raw
+    .split(/,|&| x | feat\. | ft\. | with | and /i)
+    .map(part => part.trim())
+    .filter(Boolean)
+    .forEach(part => variants.add(part))
+  return [...variants].filter(Boolean)
+}
+
+function buildLyricsAlbumVariants(track) {
+  const raw = cleanLyricsField(track?.album || '')
+  return raw ? [raw] : []
+}
+
+function normalizeMatchKey(value) {
+  return cleanLyricsField(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function scoreLrclibCandidate(row, titleVariants, artistVariants, duration) {
+  if (!row) return -1
+  const trackName = normalizeMatchKey(row.trackName || row.name || '')
+  const artistName = normalizeMatchKey(row.artistName || '')
+  let score = row.syncedLyrics ? 120 : row.plainLyrics ? 80 : 0
+
+  if (titleVariants.some(title => normalizeMatchKey(title) === trackName)) score += 40
+  else if (titleVariants.some(title => trackName.includes(normalizeMatchKey(title)) || normalizeMatchKey(title).includes(trackName))) score += 24
+
+  if (artistVariants.some(artist => normalizeMatchKey(artist) === artistName)) score += 26
+  else if (artistVariants.some(artist => artistName.includes(normalizeMatchKey(artist)) || normalizeMatchKey(artist).includes(artistName))) score += 14
+
+  if (duration && Number(row.duration)) {
+    const delta = Math.abs(Number(row.duration) - duration)
+    if (delta <= 1) score += 25
+    else if (delta <= 3) score += 18
+    else if (delta <= 7) score += 10
+  }
+
+  return score
+}
+
+async function fetchLrclibLyrics(track) {
+  const titleVariants = buildLyricsTitleVariants(track)
+  const artistVariants = buildLyricsArtistVariants(track)
+  const albumVariants = buildLyricsAlbumVariants(track)
+  const duration = Number(track?.duration) || 0
+
+  const exactQueries = []
+  titleVariants.slice(0, 3).forEach((title) => {
+    artistVariants.slice(0, 3).forEach((artist) => {
+      const params = new URLSearchParams({ track_name: title, artist_name: artist })
+      if (duration) params.set('duration', String(duration))
+      if (albumVariants[0]) params.set('album_name', albumVariants[0])
+      exactQueries.push(`https://lrclib.net/api/get?${params.toString()}`)
+    })
+  })
+
+  for (const url of exactQueries) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+      if (!res.ok) continue
+      const row = await res.json()
+      const payload = normalizeLyricsPayload(row)
+      if (payload) return payload
+    } catch (_) {}
+  }
+
+  let bestPayload = null
+  let bestScore = -1
+  for (const title of titleVariants.slice(0, 4)) {
+    for (const artist of [...artistVariants.slice(0, 3), '']) {
       try {
-        const res = await fetch(`https://lrclib.net/api/search?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(artist)}`, {
+        const params = new URLSearchParams({ track_name: title })
+        if (artist) params.set('artist_name', artist)
+        const res = await fetch(`https://lrclib.net/api/search?${params.toString()}`, {
           signal: AbortSignal.timeout(8000)
         })
         if (!res.ok) continue
         const rows = await res.json()
-        const best = Array.isArray(rows) ? rows.find(r => r.syncedLyrics || r.plainLyrics) : null
-        if (!best) continue
-        if (best.syncedLyrics) return { type: 'lrc', data: best.syncedLyrics }
-        if (best.plainLyrics) return { type: 'plain', data: best.plainLyrics }
+        if (!Array.isArray(rows)) continue
+        for (const row of rows) {
+          const payload = normalizeLyricsPayload(row)
+          if (!payload) continue
+          const score = scoreLrclibCandidate(row, titleVariants, artistVariants, duration)
+          if (score > bestScore) {
+            bestScore = score
+            bestPayload = payload
+          }
+        }
       } catch (_) {}
     }
   }
-  for (const title of titleCandidates) {
-    try {
-      const res = await fetch(`https://lrclib.net/api/search?track_name=${encodeURIComponent(title)}`, {
-        signal: AbortSignal.timeout(8000)
-      })
-      if (!res.ok) continue
-      const rows = await res.json()
-      const best = Array.isArray(rows) ? rows.find(r => r.syncedLyrics || r.plainLyrics) : null
-      if (!best) continue
-      if (best.syncedLyrics) return { type: 'lrc', data: best.syncedLyrics }
-      if (best.plainLyrics) return { type: 'plain', data: best.plainLyrics }
-    } catch (_) {}
-  }
+
+  if (bestPayload) return bestPayload
+
   return null
 }
 
@@ -803,8 +897,8 @@ async function fetchLyricsPayload(track) {
   }
 
   try {
-    const artist = encodeURIComponent(track.artist.replace(/[^a-zA-Z0-9 ]/g, '').trim())
-    const title = encodeURIComponent(track.title.replace(/[^\w\s]/g, '').trim())
+    const artist = encodeURIComponent(cleanLyricsField(track.artist).replace(/[^a-zA-Z0-9 ]/g, '').trim())
+    const title = encodeURIComponent(cleanLyricsField(track.title).replace(/[^\w\s]/g, '').trim())
     const res = await fetch(`https://api.lyrics.ovh/v1/${artist}/${title}`, { signal: AbortSignal.timeout(6000) })
     if (res.ok) {
       const json = await res.json()
@@ -830,9 +924,9 @@ function buildTrackObj(song) {
   return {
     id: song.id,
     src: audioObj.url,
-    title: song.name || song.title || 'Unknown',
-    artist: song.artists?.primary?.[0]?.name || song.artists?.all?.[0]?.name || 'Unknown',
-    album: song.album?.name || 'Single',
+    title: decodeHtmlEntities(song.name || song.title || 'Unknown'),
+    artist: decodeHtmlEntities(song.artists?.primary?.[0]?.name || song.artists?.all?.[0]?.name || 'Unknown'),
+    album: decodeHtmlEntities(song.album?.name || 'Single'),
     cover: coverUrl,
     duration: dur,
     hasLyrics: !!song.hasLyrics
@@ -1475,6 +1569,7 @@ function showView(view) {
   else if (view === 'search')    searchView.style.display = 'block'
   else if (view === 'profile')   { profileView.style.display = 'block'; renderProfileView() }
   else if (view === 'playlistDetail') playlistDetailView.style.display = 'block'
+  document.body.dataset.currentView = view
 }
 
 function buildPostersUI(append, type = 'songs') {
@@ -1659,7 +1754,11 @@ function renderQueue() {
 
 function toggleQueue() {
   const panel = document.getElementById('queuePanel'), overlay = document.getElementById('queueOverlay')
-  const open = panel.classList.toggle('open'); overlay.classList.toggle('show', open)
+  if (!panel || !overlay) return
+  const open = panel.classList.toggle('open')
+  overlay.classList.toggle('show', open)
+  document.body.classList.toggle('queue-sheet-open', open)
+  document.getElementById('queueToggleBtn')?.classList.toggle('active-state', open)
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1725,7 +1824,7 @@ async function renderProfileView() {
   document.getElementById('pstatPlayed').textContent    = playedCount
 
   // Restore active theme button
-  const currentTheme = localStorage.getItem('luca_theme') || 'luca'
+  const currentTheme = localStorage.getItem(APP_THEME_STORAGE_KEY) || 'luca'
   document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'))
   document.getElementById('theme_' + currentTheme)?.classList.add('active')
 }
@@ -1857,24 +1956,33 @@ const themes = {
   crimson: { a1: '#ff0f7b', a2: '#f89b29' },
   gold:    { a1: '#ffc837', a2: '#ff8008' },
 }
+const COLOR_THEME_STORAGE_KEY = 'luca_color_theme'
+const APP_THEME_STORAGE_KEY = 'luca_app_theme'
 function setTheme(id) {
   const t = themes[id]; if (!t) return
   document.documentElement.style.setProperty('--accent-1', t.a1)
   document.documentElement.style.setProperty('--accent-2', t.a2)
-  localStorage.setItem('luca_theme', id)
+  localStorage.setItem(COLOR_THEME_STORAGE_KEY, id)
   document.querySelectorAll('.swatch').forEach(el => el.classList.remove('active'))
   const map = { default: 'cyan-purple', matrix: 'neon-green', crimson: 'crimson-red', gold: 'gold-amber' }
   document.querySelector(`.swatch.${map[id]}`)?.classList.add('active')
 }
 
 function setThemeSettings(themeName) {
-  document.documentElement.classList.remove('theme-glass', 'theme-spotify')
-  if (themeName === 'glass')   document.documentElement.classList.add('theme-glass')
-  else if (themeName === 'spotify') document.documentElement.classList.add('theme-spotify')
-  localStorage.setItem('luca_theme', themeName)
+  const themeClasses = ['theme-luca', 'theme-obsidian', 'theme-aurora', 'theme-velvet', 'theme-sunset']
+  document.documentElement.classList.remove(...themeClasses)
+  document.documentElement.classList.add(`theme-${themeName}`)
+  localStorage.setItem(APP_THEME_STORAGE_KEY, themeName)
   document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'))
   document.getElementById('theme_' + themeName)?.classList.add('active')
-  showToast(`Theme updated to ${themeName}`, 'success')
+  const labels = {
+    luca: 'Deep Space',
+    obsidian: 'Noir Chrome',
+    aurora: 'Acid Grid',
+    velvet: 'Velvet Rouge',
+    sunset: 'Solar Storm'
+  }
+  showToast(`${labels[themeName] || themeName} enabled`, 'success')
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1991,15 +2099,16 @@ function attachEvents() {
   })
 
   document.getElementById('homeBtn').addEventListener('click', () => { setActiveNav('homeBtn'); searchInput.value = ''; loadHomeCategories() })
-  document.getElementById('searchBtn').addEventListener('click', () => searchInput.focus())
+  document.getElementById('searchBtn').addEventListener('click', () => openMobileSearch())
   document.getElementById('historyBtn').addEventListener('click', () => { setActiveNav('historyBtn'); fetchSongs('!HISTORY!', false, '🕒 Recently Played') })
   document.getElementById('likedSongsBtn').addEventListener('click', () => { setActiveNav('likedSongsBtn'); fetchSongs('!LIKED!', false, '❤️ Liked Songs') })
 
   sidebarUser.addEventListener('click', () => {
     if (!currentUser) { window.location.href = 'auth.html'; return }
+    setActiveNav('profileBtn')
     showView('profile')
   })
-  userProfileBtn.addEventListener('click', () => showView('profile'))
+  userProfileBtn.addEventListener('click', () => { setActiveNav('profileBtn'); showView('profile') })
 
   // FIX: replaced prompt() with custom modal
   newPlaylistBtn.addEventListener('click', () => {
@@ -2091,11 +2200,97 @@ function attachEvents() {
   // Lyrics sidebar panel button
   const lyrBtn = document.getElementById('lyricsBtn')
   if (lyrBtn) lyrBtn.addEventListener('click', toggleLyrics)
+  document.getElementById('mobileHomeBtn')?.addEventListener('click', () => {
+    setActiveNav('homeBtn')
+    searchInput.value = ''
+    loadHomeCategories()
+  })
+  document.getElementById('mobileSearchBtn')?.addEventListener('click', () => openMobileSearch())
+  document.getElementById('mobileLikedBtn')?.addEventListener('click', () => {
+    setActiveNav('likedSongsBtn')
+    fetchSongs('!LIKED!', false, 'Liked Songs')
+  })
+  document.getElementById('mobileLyricsBtn')?.addEventListener('click', () => {
+    setActiveNav('lyricsBtn')
+    toggleLyrics()
+  })
+  document.getElementById('mobileProfileBtn')?.addEventListener('click', () => {
+    if (!currentUser) {
+      window.location.href = 'auth.html'
+      return
+    }
+    setActiveNav('profileBtn')
+    showView('profile')
+  })
+
+  const installBtn = document.getElementById('installAppBtn')
+  const mobileInstallBanner = document.getElementById('mobileInstallBanner')
+  const mobileInstallPrimaryBtn = document.getElementById('mobileInstallPrimaryBtn')
+  const mobileInstallDismissBtn = document.getElementById('mobileInstallDismissBtn')
+  const installBannerDismissed = localStorage.getItem('luca_install_banner_dismissed') === '1'
+
+  async function handleInstallAction() {
+    const accepted = await window.triggerLucaInstall?.()
+    if (accepted) {
+      showToast('LucaVerse added to your home screen', 'success')
+      installBtn?.classList.remove('is-visible')
+      mobileInstallBanner?.classList.remove('is-visible')
+      localStorage.setItem('luca_install_banner_dismissed', '1')
+    }
+  }
+
+  if (installBtn) {
+    window.addEventListener('lucaverse:pwa-ready', () => {
+      installBtn.classList.add('is-visible')
+      if (window.innerWidth <= 768 && !installBannerDismissed) {
+        mobileInstallBanner?.classList.add('is-visible')
+      }
+    })
+    installBtn.addEventListener('click', handleInstallAction)
+  }
+  mobileInstallPrimaryBtn?.addEventListener('click', handleInstallAction)
+  mobileInstallDismissBtn?.addEventListener('click', () => {
+    mobileInstallBanner?.classList.remove('is-visible')
+    localStorage.setItem('luca_install_banner_dismissed', '1')
+  })
+
+  const attachSwipeDownToClose = (elementId, onClose) => {
+    const el = document.getElementById(elementId)
+    if (!el) return
+    let startY = 0
+    let startX = 0
+    el.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY
+      startX = e.touches[0].clientX
+    }, { passive: true })
+    el.addEventListener('touchend', (e) => {
+      const deltaY = e.changedTouches[0].clientY - startY
+      const deltaX = Math.abs(e.changedTouches[0].clientX - startX)
+      if (deltaY > 70 && deltaX < 60) onClose()
+    }, { passive: true })
+  }
+
+  attachSwipeDownToClose('queuePanel', () => {
+    if (document.getElementById('queuePanel')?.classList.contains('open')) toggleQueue()
+  })
+  attachSwipeDownToClose('lyricsPanel', () => {
+    if (lyricsVisible) toggleLyrics()
+  })
 }
 
 function setActiveNav(id) {
   document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'))
   document.getElementById(id)?.classList.add('active')
+  document.querySelectorAll('.mobile-dock-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.nav === id)
+  })
+}
+
+function openMobileSearch() {
+  setActiveNav('searchBtn')
+  showView('search')
+  document.getElementById('searchTitle').textContent = 'Search Results'
+  searchInput.focus()
 }
 
 function fmtTime(sec) {
@@ -2130,8 +2325,10 @@ function toggleLyrics() {
   if (!panel) return
   lyricsVisible = !lyricsVisible
   panel.classList.toggle('open', lyricsVisible)
+  document.body.classList.toggle('lyrics-sheet-open', lyricsVisible)
   const btn = document.getElementById('lyricsBtn')
   if (btn) btn.classList.toggle('active-state', lyricsVisible)
+  document.getElementById('mobileLyricsBtn')?.classList.toggle('active', lyricsVisible)
   if (lyricsVisible) {
     const track = playQueue[playIndex]
     if (track && track.id !== currentLyricsSongId) {
@@ -2249,7 +2446,8 @@ function _sbSyncFrame() {
 //  BOOT
 // ══════════════════════════════════════════════════════════
 async function boot() {
-  setTheme(localStorage.getItem('luca_theme') || 'default')
+  setThemeSettings(localStorage.getItem(APP_THEME_STORAGE_KEY) || 'luca')
+  setTheme(localStorage.getItem(COLOR_THEME_STORAGE_KEY) || 'default')
   await initLyricCache()
   await initAuth()
   await refreshLikedCache()
@@ -2270,3 +2468,417 @@ async function boot() {
   loadHomeCategories()
 }
 boot()
+
+function renderQueue() {
+  const list = document.getElementById('queueList')
+  if (!list) return
+  list.innerHTML = ''
+  playQueue.forEach((t, i) => {
+    const item = document.createElement('div')
+    item.className = 'queue-item' + (i === playIndex ? ' active' : '')
+    const marker = i === playIndex ? '&#9654;' : String(i + 1)
+    item.innerHTML = `
+      <div class="queue-item-main">
+        <span class="queue-item-num">${marker}</span>
+        <img class="queue-item-cover" src="${t.cover || LUCA_VINYL_PLACEHOLDER}" alt="" loading="lazy"/>
+        <div class="queue-item-info">
+          <div class="queue-item-title">${t.title}</div>
+          <div class="queue-item-artist">${t.artist}</div>
+        </div>
+      </div>
+      <button class="queue-item-remove" title="Remove from queue">Remove</button>
+    `
+    item.querySelector('.queue-item-main')?.addEventListener('click', () => { loadTrack(i); play() })
+    item.querySelector('.queue-item-remove')?.addEventListener('click', (event) => {
+      event.stopPropagation()
+      removeQueueItem(i)
+    })
+    attachQueueSwipe(item)
+    list.appendChild(item)
+  })
+  setTimeout(() => list.children[playIndex]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 100)
+}
+
+function removeQueueItem(index) {
+  if (index < 0 || index >= playQueue.length || playQueue.length <= 1) return
+  playQueue.splice(index, 1)
+  if (index < playIndex) playIndex--
+  else if (index === playIndex) {
+    playIndex = Math.max(0, Math.min(playIndex, playQueue.length - 1))
+    loadTrack(playIndex)
+    if (isPlaying) play()
+  }
+  renderQueue()
+}
+
+function attachQueueSwipe(item) {
+  let startX = 0
+  let startY = 0
+  item.addEventListener('touchstart', (e) => {
+    startX = e.touches[0].clientX
+    startY = e.touches[0].clientY
+  }, { passive: true })
+  item.addEventListener('touchend', (e) => {
+    const deltaX = e.changedTouches[0].clientX - startX
+    const deltaY = Math.abs(e.changedTouches[0].clientY - startY)
+    if (deltaY > 36) return
+    if (deltaX < -54) item.classList.add('swiped')
+    if (deltaX > 32) item.classList.remove('swiped')
+  }, { passive: true })
+}
+
+function initMobileMiniWaveform() {
+  ;['miniWaveform', 'npWaveform'].forEach((id) => {
+    const host = document.getElementById(id)
+    if (!host || host.children.length) return
+    host.innerHTML = '<span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>'
+  })
+}
+
+function initMobileTapAnimations() {
+  const targets = document.querySelectorAll('button, .mobile-dock-btn, .poster-card, .artist-card, .queue-item-main, .see-all-link, .global-search-btn')
+  targets.forEach((el) => {
+    if (el.dataset.tapBound === '1') return
+    el.dataset.tapBound = '1'
+    el.addEventListener('touchstart', () => {
+      el.classList.remove('mobile-tap-pop')
+      void el.offsetWidth
+      el.classList.add('mobile-tap-pop')
+      if (navigator.vibrate) navigator.vibrate(10)
+    }, { passive: true })
+  })
+}
+
+function initMobileOnboarding() {
+  if (window.innerWidth > 768) return
+  const seen = localStorage.getItem('luca_mobile_onboarding_seen') === '1'
+  const onboarding = document.getElementById('mobileOnboarding')
+  if (!onboarding || seen) return
+  if (onboarding.dataset.initialized === '1') {
+    onboarding.classList.add('is-visible')
+    return
+  }
+  onboarding.dataset.initialized = '1'
+
+  const slides = [...onboarding.querySelectorAll('.mobile-onboarding-slide')]
+  const dots = [...onboarding.querySelectorAll('.mobile-onboarding-dot')]
+  const nextBtn = document.getElementById('mobileOnboardingNext')
+  const skipBtn = document.getElementById('mobileOnboardingSkip')
+  let step = 0
+
+  const syncStep = () => {
+    slides.forEach((slide, index) => slide.classList.toggle('active', index === step))
+    dots.forEach((dot, index) => dot.classList.toggle('active', index === step))
+    if (nextBtn) nextBtn.textContent = step === slides.length - 1 ? 'Start Listening' : 'Next'
+  }
+
+  const close = () => {
+    onboarding.classList.remove('is-visible')
+    localStorage.setItem('luca_mobile_onboarding_seen', '1')
+  }
+
+  nextBtn?.addEventListener('click', async () => {
+    if (step === slides.length - 1) {
+      await window.triggerLucaInstall?.()
+      close()
+      return
+    }
+    step += 1
+    syncStep()
+  })
+
+  skipBtn?.addEventListener('click', close)
+  onboarding.classList.add('is-visible')
+  syncStep()
+}
+
+function initMobileShellFixes() {
+  const root = document.documentElement
+  const body = document.body
+  const appLayout = document.querySelector('.app-layout')
+  const mainView = document.querySelector('.main-view')
+  const content = document.getElementById('contentScroll')
+  const topBar = document.querySelector('.top-bar')
+  const playerBar = document.getElementById('playerBar')
+  const mobileDock = document.getElementById('mobileDock')
+  const isMobile = window.innerWidth <= 768
+
+  root.classList.toggle('mobile-shell-active', isMobile)
+  body.classList.toggle('mobile-shell-active', isMobile)
+
+  if (isMobile) {
+    const topBarHeight = Math.ceil(topBar?.getBoundingClientRect().height || 108)
+    const playerBarHeight = Math.ceil(playerBar?.getBoundingClientRect().height || 72)
+    const mobileDockHeight = Math.ceil(mobileDock?.getBoundingClientRect().height || 84)
+
+    root.style.setProperty('--mobile-topbar-h', `${topBarHeight}px`)
+    root.style.setProperty('--mobile-player-stack', `${playerBarHeight + mobileDockHeight + 26}px`)
+    root.style.setProperty('--mobile-safe-h', `${window.innerHeight}px`)
+
+    root.style.height = '100%'
+    root.style.minHeight = '100%'
+    root.style.overflow = 'hidden'
+    body.style.height = '100dvh'
+    body.style.minHeight = '100dvh'
+    body.style.overflow = 'hidden'
+    body.style.touchAction = 'pan-y'
+
+    if (appLayout) {
+      appLayout.style.height = '100dvh'
+      appLayout.style.minHeight = '100dvh'
+      appLayout.style.overflow = 'hidden'
+    }
+    if (mainView) {
+      mainView.style.height = '100dvh'
+      mainView.style.minHeight = '100dvh'
+      mainView.style.overflow = 'hidden'
+    }
+    if (content) {
+      content.style.height = 'auto'
+      content.style.minHeight = '0'
+      content.style.overflowY = 'auto'
+      content.style.overflowX = 'hidden'
+      content.style.webkitOverflowScrolling = 'touch'
+      content.style.touchAction = 'pan-y'
+      content.style.overscrollBehaviorY = 'contain'
+    }
+  } else {
+    root.style.removeProperty('--mobile-topbar-h')
+    root.style.removeProperty('--mobile-player-stack')
+    root.style.removeProperty('--mobile-safe-h')
+    root.style.height = ''
+    root.style.minHeight = ''
+    root.style.overflow = ''
+    body.style.height = ''
+    body.style.minHeight = ''
+    body.style.overflow = ''
+    body.style.touchAction = ''
+    if (appLayout) {
+      appLayout.style.height = ''
+      appLayout.style.minHeight = ''
+      appLayout.style.overflow = ''
+    }
+    if (mainView) {
+      mainView.style.height = ''
+      mainView.style.minHeight = ''
+      mainView.style.overflow = ''
+    }
+    if (content) {
+      content.style.height = ''
+      content.style.minHeight = ''
+      content.style.overflowY = ''
+      content.style.overflowX = ''
+      content.style.webkitOverflowScrolling = ''
+      content.style.touchAction = ''
+      content.style.overscrollBehaviorY = ''
+    }
+  }
+  initMobileMiniWaveform()
+  initMobileTapAnimations()
+  initMobileOnboarding()
+}
+
+setTimeout(initMobileShellFixes, 120)
+window.addEventListener('resize', () => requestAnimationFrame(initMobileShellFixes), { passive: true })
+window.addEventListener('orientationchange', () => setTimeout(initMobileShellFixes, 120), { passive: true })
+
+setTimeout(() => {
+  const installBtn = document.getElementById('installAppBtn')
+  if (!installBtn || installBtn.dataset.installBound === '1') return
+  installBtn.dataset.installBound = '1'
+  const showManualInstall = () => {
+    installBtn.classList.add('is-visible', 'mobile-install-show')
+    installBtn.textContent = 'Install'
+  }
+  window.addEventListener('lucaverse:pwa-ready', () => {
+    showManualInstall()
+    installBtn.onclick = async () => {
+      const accepted = await window.triggerLucaInstall?.()
+      if (accepted) showToast('LucaVerse added to your home screen', 'success')
+    }
+  })
+  window.addEventListener('lucaverse:pwa-manual', () => {
+    showManualInstall()
+    installBtn.onclick = () => {
+      showToast(window.lucaInstallHelp || 'Open browser menu and choose Add to Home screen.', 'info', 5200)
+    }
+  })
+  window.addEventListener('lucaverse:pwa-installed', () => {
+    installBtn.classList.remove('mobile-install-show')
+    installBtn.textContent = 'Installed'
+    installBtn.onclick = null
+  })
+  if (window.innerWidth <= 768) {
+    setTimeout(() => {
+      if (!installBtn.classList.contains('is-visible')) {
+        showManualInstall()
+        installBtn.onclick = () => {
+          showToast(window.lucaInstallHelp || 'Open browser menu and choose Add to Home screen.', 'info', 5200)
+        }
+      }
+    }, 2200)
+  }
+}, 180)
+
+function commitQueueOrderFromDom() {
+  const list = document.getElementById('queueList')
+  if (!list) return
+  const currentKey = playQueue[playIndex]?.__queueKey
+  const map = new Map(playQueue.map(track => {
+    if (!track.__queueKey) track.__queueKey = `queue_${Math.random().toString(36).slice(2, 10)}`
+    return [track.__queueKey, track]
+  }))
+  const ordered = [...list.querySelectorAll('.queue-item')]
+    .map(item => map.get(item.dataset.queueKey))
+    .filter(Boolean)
+  if (!ordered.length) return
+  playQueue = ordered
+  const newIndex = playQueue.findIndex(track => track.__queueKey === currentKey)
+  playIndex = newIndex >= 0 ? newIndex : Math.min(playIndex, playQueue.length - 1)
+}
+
+function removeQueueItem(index) {
+  if (index < 0 || index >= playQueue.length || playQueue.length <= 1) return
+  const removingCurrent = index === playIndex
+  const currentKey = playQueue[playIndex]?.__queueKey
+  playQueue.splice(index, 1)
+  if (removingCurrent) {
+    playIndex = Math.max(0, Math.min(index, playQueue.length - 1))
+    loadTrack(playIndex)
+    if (isPlaying) play()
+  } else {
+    const newIndex = playQueue.findIndex(track => track.__queueKey === currentKey)
+    playIndex = newIndex >= 0 ? newIndex : Math.min(playIndex, playQueue.length - 1)
+  }
+  renderQueue()
+}
+
+function getQueueDropTarget(list, y, dragged) {
+  const siblings = [...list.querySelectorAll('.queue-item:not(.queue-dragging)')]
+  return siblings.reduce((closest, child) => {
+    const box = child.getBoundingClientRect()
+    const offset = y - box.top - box.height / 2
+    if (offset < 0 && offset > closest.offset) return { offset, element: child }
+    return closest
+  }, { offset: Number.NEGATIVE_INFINITY, element: null }).element
+}
+
+function attachQueueSwipe(item) {
+  if (item.dataset.queueGestureBound === '1') return
+  item.dataset.queueGestureBound = '1'
+  let startX = 0
+  let startY = 0
+  let dragTimer = null
+  let dragging = false
+  const list = item.parentElement
+
+  const clearDragTimer = () => {
+    if (dragTimer) {
+      clearTimeout(dragTimer)
+      dragTimer = null
+    }
+  }
+
+  item.setAttribute('draggable', 'true')
+  item.addEventListener('dragstart', () => {
+    dragging = true
+    list?.classList.add('queue-reordering')
+    item.classList.add('queue-dragging')
+  })
+  item.addEventListener('dragend', () => {
+    dragging = false
+    list?.classList.remove('queue-reordering')
+    item.classList.remove('queue-dragging')
+    commitQueueOrderFromDom()
+    renderQueue()
+  })
+
+  item.addEventListener('touchstart', (e) => {
+    startX = e.touches[0].clientX
+    startY = e.touches[0].clientY
+    clearDragTimer()
+    dragTimer = setTimeout(() => {
+      dragging = true
+      list?.classList.add('queue-reordering')
+      item.classList.add('queue-dragging')
+    }, 180)
+  }, { passive: true })
+
+  item.addEventListener('touchmove', (e) => {
+    if (!dragging || !list) return
+    const touch = e.touches[0]
+    const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.queue-item')
+    if (target && target !== item && target.parentElement === list) {
+      const box = target.getBoundingClientRect()
+      if (touch.clientY < box.top + box.height / 2) list.insertBefore(item, target)
+      else list.insertBefore(item, target.nextSibling)
+    }
+    e.preventDefault()
+  }, { passive: false })
+
+  item.addEventListener('touchend', (e) => {
+    const deltaX = e.changedTouches[0].clientX - startX
+    const deltaY = Math.abs(e.changedTouches[0].clientY - startY)
+    clearDragTimer()
+    if (dragging) {
+      dragging = false
+      list?.classList.remove('queue-reordering')
+      item.classList.remove('queue-dragging')
+      commitQueueOrderFromDom()
+      renderQueue()
+      return
+    }
+    if (deltaY > 36) return
+    if (deltaX < -54) item.classList.add('swiped')
+    if (deltaX > 32) item.classList.remove('swiped')
+  }, { passive: true })
+
+  if (list && list.dataset.dragoverBound !== '1') {
+    list.dataset.dragoverBound = '1'
+    list.addEventListener('dragover', (e) => {
+      e.preventDefault()
+      const after = getQueueDropTarget(list, e.clientY, item)
+      const draggingEl = list.querySelector('.queue-dragging')
+      if (!draggingEl) return
+      if (after == null) list.appendChild(draggingEl)
+      else list.insertBefore(draggingEl, after)
+    })
+  }
+}
+
+function renderQueue() {
+  const list = document.getElementById('queueList')
+  if (!list) return
+  list.innerHTML = ''
+  playQueue.forEach((track, index) => {
+    if (!track.__queueKey) track.__queueKey = `queue_${Math.random().toString(36).slice(2, 10)}`
+    const item = document.createElement('div')
+    item.className = 'queue-item' + (index === playIndex ? ' active' : '')
+    item.dataset.queueKey = track.__queueKey
+    const marker = index === playIndex ? '&#9654;' : String(index + 1)
+    item.innerHTML = `
+      <div class="queue-item-main">
+        <span class="queue-item-num">${marker}</span>
+        <img class="queue-item-cover" src="${track.cover || LUCA_VINYL_PLACEHOLDER}" alt="" loading="lazy"/>
+        <div class="queue-item-info">
+          <div class="queue-item-title">${track.title}</div>
+          <div class="queue-item-artist">${track.artist}</div>
+        </div>
+        <span class="queue-item-grab" title="Drag to reorder">↕</span>
+      </div>
+      <button class="queue-item-remove" title="Remove from queue">Remove</button>
+    `
+    item.querySelector('.queue-item-main')?.addEventListener('click', () => {
+      loadTrack(index)
+      play()
+      renderQueue()
+    })
+    item.querySelector('.queue-item-remove')?.addEventListener('click', (event) => {
+      event.stopPropagation()
+      removeQueueItem(index)
+    })
+    attachQueueSwipe(item)
+    list.appendChild(item)
+  })
+  setTimeout(() => list.children[playIndex]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 100)
+}
